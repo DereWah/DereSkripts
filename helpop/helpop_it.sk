@@ -1,0 +1,17 @@
+#/aiuto by DereWah <---- https://t.me/skriptitaly per altri drop.
+#Language: IT Version: 1.0
+
+Options:
+	p: &7[&4&lAIUTO&7] #prefix
+	staff_permission: derewah.receiveaiuto #permessi da dare ai membri dello staff che riceveranno gli alerts.
+
+command /aiuto <text>:
+	usage: &cUso corretto: /aiuto <text>
+	permission: derewah.aiuto
+	cooldown: 30 seconds
+	trigger:
+		send message "{@p} &cHai richiesto aiuto. Un membro dello staff arriverà al più presto."
+		loop all players:
+			if loop-player has permission "{@staff_permission}":
+				send message formatted "{@p} &4&l%player%&c ha richiesto aiuto.%nl%{@p} &cMotivazione: &7%arg%%nl%{@p} <command:/tp %player%>&7[&c&lTELEPORT&7]<reset>" to loop-player
+					

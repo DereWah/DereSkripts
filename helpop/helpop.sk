@@ -1,0 +1,21 @@
+#/staff by DereWah <---- https://t.me/skriptitaly per altri drop.
+#Language: EN Version: 1.0
+
+Options:
+	p: &7[&4&lSTAFF&7] #prefix
+	staff_permission: derewah.receivehelp #permessi da dare ai membri dello staff che riceveranno gli alerts.
+
+command /staff <text>:
+	aliases: /help, /helpop
+	usage: &cUso corretto: /aiuto <text>
+	permission: derewah.help
+	cooldown: 30 seconds
+	trigger:
+		send message "{@p} &cYou have asked for help. A staff member will help as soon as possible."
+		loop all players:
+			if loop-player has permission "{@staff_permission}":
+				soundHelp(loop-player)
+				send message formatted "{@p} &4&l%player%&c needs help.%nl%{@p} &cReason: &7%arg%%nl%{@p} <command:/tp %player%>&7[&c&lTELEPORT&7]<reset>" to loop-player
+					
+function soundHelp(p: player):
+	play sound "minecraft:block.bell.use" at volume 1 at pitch 2 to {_p} #Might not work unless you're on a recent version of minecraft.
