@@ -1,0 +1,367 @@
+#DereBank 2.0 skript by DereWah -> https://www.spigotmc.org/resources/derebank-credit-card-with-pin-and-atm.102613/
+#Language: EN
+#This is a complete rework of my previous skript DereBank (version 1.5), a lot of stuff has been added and the PIN
+#system has been completely upgraded.
+
+#COMANDI
+#/derebank | derebank.use | Access to the base command.
+#/derebank create | derebank.create | Create a credit card for a player.
+#/derebank block | derebank.block | Delete a player's credit card.
+#/derebank list | derebank.list | View the PIN of all the online players.
+#/derebank lookup | derebank.lookup | View the PIN of a specific player.
+#/derebank setlimit | derebank.setlimit | Set the withdraw limit of a player's card.
+#/derebank setup | derebank.setup | Receive the items to setup an ATM.
+#/derebank debug | derebank.debug | Reset the skript and all the variables.
+
+
+Options:
+	p: &7[&cDere&eBank&7]&r #Skript prefix
+	give_card_on_join: true #Should the new players receive a card upon joinig?
+	atm_gui_name: &7[&a&lATM&7] #Atm GUI name. Do not put this the same as pin_gui_name.
+	pin_gui_name: &7[&c&lPIN&7] #Pin GUI name. Do not put this the same as atm_gui_name.
+	atm_block: observer #ATM block
+	card_item: stick #Item for the credit card.
+	card_name: &9&lCREDIT CARD #Name of the credit card item.
+	cash_item: paper #Cash item.
+	gui_canvas: &7[&a&lATM&7] #Name of the GUI canvas slots.
+	card_lore: &7Access your bank account! #Card description.
+	credits: true #Dev credits.
+	default_limit: 5000 #Withdraw limit for a default card.
+	#This is used for new players upon joining and by default when the limit is not specified while creating a card.
+	#The following values are for the cash pieces. You can customize these as you please.
+	cash1:1
+	cash2:1
+	cash3:2
+	cash4:5
+	cash5:10
+	cash6:20
+	cash7:50
+	cash8:100
+	cash9:200
+	cash10:500
+	
+
+
+command /derebank [<text>] [<player>] [<integer>]:
+	aliases: /atm, /bank, /banca, /credit, /carta
+	permission: dereank.use
+	permission message: {@p} &cNon hai il permesso &4derebank.use&c.
+	trigger:
+		if arg-1 is "create" or "give" or "make" or "fai" or "crea":
+			if player has permission "derebank.give":
+				if arg-2 is set:
+					send message "&7-------"
+					send message ""
+					send message "{@p} &7is preparing &9&n%arg-2%&7's card..."
+					send message ""
+					send message "&7-------"
+					wait 2 seconds
+					if {derebank::cards::%arg-2%::pin} is not set:
+						if arg-3 is not set:
+							set {_lim} to {@default_limit}
+						else:
+							set {_lim} to arg-3
+						makeCard(arg-2, {_lim})
+						send message "{@p} &7You have created &9%arg-2%&7's card."
+						send message "{@p} &7You received a credit card." to arg-2
+					else:
+						send message "{@p} &cThis player already has a credit card."
+				else:
+					send message "{@p} &cSpecify the player.."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.give&c."
+		else if arg-1 is "setup" or "monta":
+			if player has permission "derebank.setup":
+				add 1 {@atm_block} named "&9&lATM&7 block" with lore "&7Place this block to setup an ATM." to player's inventory
+				add 1 stick named "&7Setup &9&lATM" with lore "&7Click on an ATM block to finish setting up an ATM.%nl%&7Click again to remove it." to player's inventory
+				send message "{@p} &7Place the &9&l&oATM&8&o block&7 to begin setting up an ATM. Then right click on it with the &8&oSetup &9&l&oATM&7 item to finish setting it up."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.setup&c."
+		else if arg-1 is "limit" or "setlimit" or "imposta" or "limite":
+			if player has permission "derebank.setlimit":
+				if arg-2 is set:
+					if arg-3 is set:
+						if {derebank::cards::%arg-2%::pin} is set:
+							set {derebank::cards::%arg-2%::lim} to arg-3
+							send message "{@p} &7You have set &9%arg-2%&7's withdraw limit to &1$&9%arg-3%&7."
+						else:
+							send message "{@p} &cThis player does not have a card."
+					else:
+						send message "{@p} &cSpecify the withdraw limit."
+				else:
+					send message "{@p} &cSpecify the player."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.setlimit"
+		else if arg-1 is "block" or "blocca" or "remove" or "delete" or "cancella":
+			if player has permission "derebank.block":
+				if arg-2 is set:
+					if {derebank::cards::%arg-2%::pin} is set:
+						blockCard(arg-2)
+						send message "{@p} &7You have blocked &9%arg-2%&7's card."
+					else:
+						send message "{@p} &cThis player does not have a card."
+				else:
+					send message "{@p} &cSpecify the player."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.block&c."
+		else if arg-1 is "list":
+			if player has permission "derebank.list":
+				send message "&7---{@p}&7---"
+				loop all players:
+					send message formatted "<cmd:/derebank block %loop-player%>&7[&c&lX&7]<reset> %loop-player% <tooltip:&7&lPIN: %{derebank::cards::%loop-player%::pin}%>&7[&a&lPIN&7]<reset>"
+				send message "&7---{@p}&7---"
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.list&c."
+		else if arg-1 is "lookup" or "info" or "pin" or "check" or "view":
+			if player has permission "derebank.lookup":
+				if arg-2 is set:
+					if {derebank::cards::%arg-2%::pin} is set:
+						send message formatted "{@p} &9%arg-2%&7's PIN: <tooltip:%{derebank::cards::%arg-2%::pin}%>&7[&a&lHOVER&7]<reset>"
+					else:
+						send message "{@p} &cThis player does not have a card."
+				else:
+					send message "{@p} &cSpecify the player."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.lookup&c."
+		else if arg-1 is "debug":
+			if player has permission "derebank.debug":
+				send message "{@p} &7Clearing &9%size of {derebank::cards::*}% &7bank accounts..."
+				loop {derebank::cards::*}:
+					clear {derebank::cards::%loop-value%::pin}
+					clear {derebank::cards::%loop-value%::lim}
+					remove loop-value from {derebank::cards::*}
+				clear {derebank::atms::*}
+				send message "{@p} &7Skript reset successfully."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.lookup&c."
+		else:
+			loop 20 times:
+				send message ""
+			send message "&7---{@p}&7---"
+			send message "&7&oSkript by: &6DereWah"
+			send message "&7<url:https://t.me/skriptitaly>[&b&lTG&7]<reset> &7<url:https://www.spigotmc.org/members/derewah.240784/>[&e&lSPIGOT&7]<reset> <url:https://dereskripts.tebex.io/>&7[&2&lWEBSITE&7]<reset>"
+			send message "&7---{@p}&7---"
+			send message "{@p} &cCommands: /derebank give&4|&cblock&4|&clist&4|&clookup&4|&climit&4|&csetup&4|&cdebug"	
+			
+			
+on first join:
+	if {@give_card_on_join} is true:
+		makeCard(player, {@default_limit})
+		
+on rightclick with {@atm_block}:
+	if player's tool's name is "&9&lATM&7 block":
+		send message "{@p} &7To finish creating the ATM simply right click on this block with the &8&oSetup &9&l&oATM&7 item."
+		bankPlaySound(player, "entity.experience_orb.pickup", 1, 1)
+		
+
+function makeCard(p: player, lim: integer):
+	set {_pin} to ""
+	loop 4 times:
+		set {_x} to a random integer between 0 and 9
+		set {_pin} to "%{_x}%%{_pin}%"
+	set {derebank::cards::%{_p}%::pin} to {_pin}
+	if {derebank::cards::*} does not contain {_p}:
+		add {_p} to {derebank::cards::*}
+	set {derebank::cards::%{_p}%::lim} to {_lim}
+	add 1 of instanceCard({_p}) to {_p}'s inventory
+	add 1 of instancePinBook({_p}) to {_p}'s inventory
+	
+function blockCard(p: player):
+	if {derebank::cards::%{_p}%::pin} is set:
+		clear {derebank::cards::%{_p}%::pin}
+		clear {derebank::cards::%{_p}%::lim}
+	if {derebank::cards::*} contains {_p}:
+		remove {_p} from {derebank::cards::*}
+	
+
+function instanceCard(p: player) :: item:
+	set {_item} to {@card_item}
+	set {_item}'s name to "{@card_name}"
+	set 1st line of {_item}'s lore to "&0%{_p}%"
+	set 2nd line of {_item}'s lore to "{@card_lore}"
+	return {_item}
+	
+function instancePinBook(p: player) :: item:
+	set {_item} to written book
+	set {_t} to text component of formatted "   {@p}   &7%nl%%nl%-----------------%nl%%nl%&8&lPIN: &7[&9&lHOVER&7]%nl%%nl%&8Be &4careful&8 not to lose your credit card pin!"
+	set hover event of {_t} to hover event showing "&7&lPIN: &9&l%{derebank::cards::%{_p}%::pin}%"
+	set page 1 of book {_item} to {_t}
+	set book author of {_item} to "{@p}"
+	set book title of {_item} to "&7%{_p}%'s PIN"
+	set 1st line of {_item}'s lore to "&0%{_p}%"
+	return {_item}
+	
+function openPinGui(p: player, account: offlineplayer, current: string):
+	if name of {_p}'s current inventory is not "{@pin_gui_name}":
+		set {_pingui} to a new chest inventory with 9 row with name "{@pin_gui_name}"	
+		set slot 0,1,2,3,4,5,6,7,8,9,17,18,26,27,35,36,44,45,46,47,48,49,50,51,52,53 of {_pingui} to red stained glass pane named "{@gui_canvas}"
+		set slot 49 of {_pingui} to skull of ("Hack" parsed as offline player) with name "&f&l0" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 21 of {_pingui} to 1 of skull of ("Hack" parsed as offline player) with name "&f&l1" with lore "&7%{_current}%" and "&0%{_account}%"	
+		set slot 22 of {_pingui} to 2 of skull of ("Hack" parsed as offline player) with name "&f&l2" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 23 of {_pingui} to 3 of skull of ("Hack" parsed as offline player) with name "&f&l3" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 30 of {_pingui} to 4 of skull of ("Hack" parsed as offline player) with name "&f&l4" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 31 of {_pingui} to 5 of skull of ("Hack" parsed as offline player) with name "&f&l5" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 32 of {_pingui} to 6 of skull of ("Hack" parsed as offline player) with name "&f&l6" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 39 of {_pingui} to 7 of skull of ("Hack" parsed as offline player) with name "&f&l7" with lore "&7%{_current}%" and "&0%{_account}%"	
+		set slot 40 of {_pingui} to 8 of skull of ("Hack" parsed as offline player) with name "&f&l8" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 41 of {_pingui} to 9 of skull of ("Hack" parsed as offline player) with name "&f&l9" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 13 of {_pingui} to 1 of skull of ("Tom25W" parsed as offline player) with name "&f&l%{_current}%" with lore "&0%{_current}%" and "&0%{_account}%"
+		set slot 50 of {_pingui} to 1 of skull of ("Push_red_button" parsed as offline player) with name "&c&l<-" with lore "&7%{_current}%" and "&0%{_account}%"
+		set slot 48 of {_pingui} to 1 of skull of ("BKing2012" parsed as offline player) with name "&a&lINVIO" with lore "&7%{_current}%" and "&0%{_account}%"
+		open {_pingui} to {_p}
+	else:
+		set {_pingui} to {_p}'s current inventory
+		set name of slot 13 of {_pingui} to "&f&l%{_current}%"
+		set lore of slot 49 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 21 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 22 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 23 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 30 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 31 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 32 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 39 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 40 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 41 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 13 of {_pingui} to "&0%{_current}%" and "&0%{_account}%"
+		set lore of slot 50 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+		set lore of slot 48 of {_pingui} to "&7%{_current}%" and "&0%{_account}%"
+
+function instanceCash(i: integer, gui: boolean, account: offlineplayer) :: item:
+	set {_item} to {@cash_item}
+	set {_item}'s name to "&2&l$&a%{_i}%"
+	set 1st line of {_item}'s lore to "&0%{_i}%"
+	if {_gui} is true:
+		set 2nd line of {_item}'s lore to "&0%{_account}%"
+	set 3rd line of {_item}'s lore to "&0CASH"
+	return {_item}
+
+function openBank(p: player, account: offlineplayer):
+	set {_gui} to a new chest inventory with 4 row with name "{@atm_gui_name}"	
+	set slot 0,1,2,3,4,5,6,7,8,9,17,18,26,27,28,29,30,31,32,33,34,35 of {_gui} to lime stained glass pane named "{@gui_canvas}"
+	set slot 4 of {_gui} to skull of ("Tom25W" parsed as offline player) with name "&6&l%{_account}'s balance%" with lore "&cWithdrawal limit: &4&l$&c%{derebank::cards::%{_p}%::lim}%"
+	set slot 13 of {_gui} to instanceCash({@cash3}, true, {_account})
+	set slot 12 of {_gui} to instanceCash({@cash1}, true, {_account})
+	set slot 14 of {_gui} to instanceCash({@cash2}, true, {_account}) 
+	set slot 19 of {_gui} to instanceCash({@cash4}, true, {_account})
+	set slot 20 of {_gui} to instanceCash({@cash5}, true, {_account})
+	set slot 21 of {_gui} to instanceCash({@cash6}, true, {_account})
+	set slot 22 of {_gui} to instanceCash({@cash7}, true, {_account})
+	set slot 23 of {_gui} to instanceCash({@cash8}, true, {_account})
+	set slot 24 of {_gui} to instanceCash({@cash9}, true, {_account})
+	set slot 25 of {_gui} to instanceCash({@cash10}, true, {_account})
+	set slot 31 of {_gui} to skull of ("Push_red_button" parsed as offline player) with name "&c&lCLOSE"
+	open {_gui} to {_p}
+	
+on right click on {@atm_block}:
+	if player's tool is stick:
+		if player's tool's name is "&7Setup &9&lATM":
+			if player has permission "derebank.setup":
+				set {_x} to event-block's location
+				if {derebank::atms::*} does not contain {_x}:
+					add {_x} to {derebank::atms::*}
+					send message "{@p} &7You created this ATM succesfully."
+					bankPlaySound(player, "block.note_block.pling", 1, 0.71)
+					wait 5 ticks
+					bankPlaySound(player, "block.note_block.pling", 1, 0.84)
+					wait 5 ticks
+					bankPlaySound(player, "block.note_block.pling", 1, 1.06)	
+				else:
+					remove {_x} from {derebank::atms::*}
+					send message "{@p} &7You deleted this ATM succesfully."
+			else:
+				send message "{@p} &cYou don't have the permission &4derebank.setup&c."
+	set {_x} to event-block's location
+	if {derebank::atms::*} contains {_x}:
+		if player's tool is {@cash_item}:
+			if 3rd line of player's tool's lore is "&0CASH":
+				if {derebank::cards::%player%::pin} is set:
+					set {_amount} to uncoloured 1st line of player's tool's lore parsed as integer
+					remove 1 of player's tool from player's inventory
+					add {_amount} to player's balance
+					send message "{@p} &7You deposited &6&l$&e%{_amount}%"
+					bankPlaySound(player, "block.note_block.chime", 1, 1.5)
+				else:
+					send message "{@p} &cYou don't have an active bank account."
+		else if player's tool is {@card_item}:
+			if player's tool's name is "{@card_name}":
+				set {_account} to uncoloured 1st line of player's tool's lore parsed as offline player
+				if {derebank::cards::%{_account}%::pin} is set:
+					openPinGui(player, {_account}, "")
+					send message "{@p} &7Insert your PIN to access your bank account."
+				else:
+					send message "{@p} &cThis card is not connected to any bank account."
+			
+	
+	
+	
+on inventory click:
+	if name of event-inventory is "{@pin_gui_name}":
+		cancel event
+		set {_current} to uncoloured 1st line of event-slot's lore
+		set {_account} to uncoloured 2nd line of event-slot's lore parsed as offline player
+		if index of event-slot is 48 or 13:
+			if length of {_current} >= 4:
+				if {_current} = {derebank::cards::%{_account}%::pin}:
+					close player's inventory
+					send message "{@p} &7Access granted..."
+					openBank(player, {_account})
+					bankPlaySound(player, "block.note_block.pling", 1, 0.71)
+					wait 5 ticks
+					bankPlaySound(player, "block.note_block.pling", 1, 0.84)
+					wait 5 ticks
+					bankPlaySound(player, "block.note_block.pling", 1, 1.06)						
+				else:
+					send message "{@p} &cWrong PIN. Try again."
+			else:
+				send message "{@p} &cInsert a 4 digits PIN."
+		else if index of event-slot is 50:
+			if length of {_current} > 0:
+				set {_p::*} to {_current} split at ""
+				remove {_p::%size of {_p::*}%} from {_p::*}
+				remove {_p::%size of {_p::*}%} from {_p::*}
+				set {_current} to ""
+				loop {_p::*}:
+					set {_current} to "%{_current}%%loop-value%"
+				openPinGui(player, {_account}, {_current})
+		else if index of event-slot is 39 or 40 or 41 or 30 or 31 or 32 or 21 or 22 or 23 or 49:
+			if length of {_current} < 4:
+				set {_p::*} to {_current} split at ""
+				set {_n} to uncoloured name of event-slot
+				set {_mult} to {_n} parsed as integer / 10
+				bankPlaySound(player, "block.note_block.harp", 1, 0.5+{_mult})
+				set {_current} to "%{_current}%%{_n}%"
+				openPinGui(player, {_account}, {_current})
+	else if name of event-inventory is "{@atm_gui_name}":
+		cancel event
+		if index of event-slot is 31:
+			close player's inventory
+			send message "{@p} &7You logged out from your bank account."
+			bankPlaySound(player, "entity.experience_orb.pickup", 1, 1.5)
+		else if index of event-slot is 12 or 13 or 14 or 19 or 20 or 21 or 22 or 23 or 24 or 25:
+			set {_amount} to uncoloured 1st line of event-slot's lore parsed as integer
+			set {_account} to uncoloured 2nd line of event-slot's lore parsed as offline player
+			if {_account}'s balance >= {_amount}:
+				if {_amount} <= {derebank::cards::%player%::lim}:
+					remove {_amount} from {_account}'s balance
+					send message "{@p} &7You received &6&l$&e%{_amount}%&7."
+					remove {_amount} from {derebank::cards::%player%::lim}
+					add 1 of instanceCash({_amount}, false, {_account}) to player's inventory
+					bankPlaySound(player, "item.book.page_turn", 1, 1.5)
+					close player's inventory
+					openBank(player, {_account})
+				else:
+					bankPlaySound(player, "block.note_block.harp", 1, 0.71)
+					wait 5 tick
+					bankPlaySound(player, "block.note_block.harp", 1, 0.53)
+			else:
+				bankPlaySound(player, "block.note_block.harp", 1, 0.71)
+				wait 5 tick
+				bankPlaySound(player, "block.note_block.harp", 1, 0.53)				
+				
+function bankPlaySound(p: player, id: string, v: integer, pitch: number):
+	play sound "minecraft:%{_id}%" at volume {_v} at pitch {_pitch} to {_p}
+	
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"

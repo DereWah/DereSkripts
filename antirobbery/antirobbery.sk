@@ -1,0 +1,82 @@
+#DereBank 1.4 skript by DereWah
+#Language: EN Italian version: https://t.me/skriptitaly
+
+
+#COMMANDS:
+#/antirobbery | derewah.antirobbery | receive a stick to install an anti-robbery sign.
+
+#PERMISSIONS:
+#Use anti-robbery signs: derewah.antirobberyuse
+#Receive anti-robbery alerts: derewah.antirobberyalerts
+
+#SETUP A SIGN
+#Place a sign and type on the first line the name of the shop it is placed into.
+#Then right click using the anti-robbery stick to transform it into an antirobbery sign.
+
+Options:
+	p: &7[&cAnti&1Robbery&7] #Skript prefix
+	lore: &7Right click on a sign to setup an anti-robbery sign. #Antirobbery stick lore
+	header: &7---&c&lROBBERY ALERT&7--- #header for alert
+	footer: &7--------------------- #footer for alert
+	click: &c&lCLICK #button message
+	called: &1&lCALLING... #button message when calling
+	cooldown: 10 seconds #cooldown between sign uses.
+	credits: true #send credits in chat
+
+command /antirobbery:
+	permission: derewah.antirobbery
+	trigger:
+		add 1 of instanceAntiRobberyStick() to player's inventory
+		give 1 sign to player's inventory
+		send message "{@p} &7You received an anti-robbery stick."
+		
+		
+on rightclick on sign:
+	if player's tool is instanceAntiRobberyStick():
+		if 1st line of event-block is not "":
+			set {_place} to 1st line of event-block
+			set 2nd line of event-block to "&1%{_place}%"
+			set 1st line of event-block to "{@p}"
+			set 3rd line of event-block to "{@click}"
+			set 4th line of event-block to "&7to call police"
+		else:
+			send message "{@p} &7The 1st line of the sign must not be empty."
+			send message "{@p} &7Please set it to the name of the shop in which the sign is located."
+	else:
+		if 1st line of event-block is "{@p}":
+			if player has permission "derewah.antirobberyuse":
+				if 3rd line of event-block is "{@click}":
+					send message "{@p} &7The police has been called."				
+					set 3rd line of event-block to "{@called}"
+					soundClickRobbery(location of event-block)
+					loop all players:
+						if loop-player has permission "derewah.antirobberyalerts":
+							soundAlertRobbery(loop-player)
+							send message "{@header}" to loop-player
+							send message "&7Place: &c%uncoloured 2nd line of event-block%" to loop-player
+							send message "&7Requested by: &c%event-player%" to loop-player
+							send message "{@footer}" to loop-player
+					wait {@cooldown}
+					set 3rd line of event-block to "{@click}"
+				else:
+					send message "{@p} &7Police has already been called."
+
+		
+function instanceAntiRobberyStick() :: item:
+	set {_item} to stick
+	set {_item}'s name to "{@p}"
+	set 1st line of {_item}'s lore to "{@lore}"
+	return {_item}
+	
+	
+function soundClickRobbery(l: location):
+	play sound "minecraft:block.tripwire.click_on" at volume 1 at pitch 1 at {_l}
+	
+function soundAlertRobbery(p: player):
+	play sound "minecraft:block.anvil.place" at volume 1 at pitch 1 to {_p}
+	
+
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"

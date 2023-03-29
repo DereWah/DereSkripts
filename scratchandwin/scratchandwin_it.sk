@@ -1,0 +1,235 @@
+#Skript: grattaevinci.sk by DereWah-> https://t.me/skriptitaly
+#Lingua: IT
+#Version: 1.0
+#SHOP: https://dereskripts.tebex.io/
+
+#Requirements:
+#Skript 2.6.2
+
+#COMMANDS:
+#/grattaevinci give | grattevinci.give | dai un  grattaevinci ad un giocatore.
+#/grattaevinci clear | grattaevinci.clear | rendi invalido un grattaevinci creato (usa l'ID per farlo)
+#/grattaevinci verify | grattaevinci.verify | verifica la vincita un grattaevinci senza aprirlo.
+#/grattaevinci debug | grattaevinci.debug | resetta lo skript e tutte le variabili. Elimina tutti i grattaevinci
+
+
+
+Options:
+	p: &7[&e&lGratta&8e&6&lVinci&7] #Skript prefix
+	item: paper #oggetto del grattaevinci
+	item_name: &e&lGratta&8e&6&lVinci&7 #nome del grattaevinci
+	non_grattato: &c&lNON GRATTATO #stato "non grattato"
+	grattato: &a&lGRATTATO #stato "grattato"
+	tutorial: &7Gratta i &atuoi numeri&7 ed i &6numeri vincenti&7%nl%&7per scoprire se hai vinto.%nl%&7Se tra i tuoi numeri vi è un &6&lNUMERO VINCENTE%nl%&7vinci il relativo premio. #tutorial
+	autopay: true #lo skript paga in automatico il giocatore appena vince? Oppure deve andare a ritirarlo manualmente in RP?
+	credits: true #dev credits
+	min_payout: 1 #valore da moltiplicare per 1000, sarebbe il minimo di soldi in un singolo slot. (1000)
+	max_payout: 20 #valore da moltiplicare per 1000, è il massimo di soldi in un singolo slot. (20000)
+
+
+
+command /grattaevinci [<text>] [<player>] [<integer>]:
+	permission: grattaevinci.use
+	permission message: {@p} &cNon hai il permesso &4grattaevinci.use&c.
+	trigger:
+		if arg-1 is "give":
+			if player has permission "grattaevinci.give":
+				if arg-2 is set:
+					if {grattaevinci::id} is not set:
+						set {grattaevinci::id} to 0
+					add 1 to {grattaevinci::id}					
+					add 1 of instanceGrattaevinci({grattaevinci::id}) to arg-2's inventory
+					send message "{@p} &7Hai dato un {@p}&7 a &6%arg-2%&7."
+				else:
+					send message "{@p} &cSpecifica il giocatore a cui dare il {@item_name}."
+			else:
+				send message "{@p} &cNon hai il permesso &4grattaevinci.use&c."
+		else if arg-1 is "clear" or "remove":
+			if player has permission "grattaevinci.clear":
+				if arg-3 is set:
+					clearGrattaevinci(arg-3)
+					send message "{@p} &7Gratta e vinci %arg-3% eliminato."
+				else:
+					send message "{@p} &cSpecifica l'id del gratta e vinci da eliminare."
+			else:
+				send message "{@p} &cNon hai il permesso &4grattaevinci.clear&c."
+		else if arg-1 is "verify":
+			if player has permission "grattaevinci.verify":
+				if arg-3 is set:
+					if {grattaevinci::%arg-3%::aperto} is set:
+						if {grattaevinci::%arg-3%::aperto} is true:
+							send message "{@p} &7Il valore del gratta e vinci è nella descrizione dell'item."
+						else:
+							set {_prize} to verificaGrattaevinci(arg-3)
+							send message "{@p} &7Questo gratta e vinci ha una vincita di &6&l$&e%{_prize}%&7."
+					else:
+						send message "{@p} &cQuesto gratta e vinci non è più valido."
+				else:
+					send message "{@p} &cSpecifica l'ID da verificare."
+			else:
+				send message "{@p} &cNon hai il permesso &4grattaevinci.verify&c."
+		else if arg-1 is "debug":
+			if player has permission "grattevinci.debug":
+				send message "{@p} &7Resettando &e%{grattaevinci::id}% &7gratta e vinci..."
+				loop {grattaevinci::id} times:
+					clear {grattaevinci::%loop-value%::aperto}
+					clear {grattaevinci::%loop-value%::vincenti::*}
+					clear {grattaevinci::%loop-value%::numeri::*}
+					clear {grattaevinci::%loop-value%::premi::*}
+					clear {grattaevinci::%loop-value%::progress}
+					set {_x} to 1
+					loop 12 times:
+						clear {grattaevinci::%loop-value-1%::viewed::%{_x}%}
+						add 1 to {_x}
+				set {grattaevinci::id} to 0
+				send message "{@p}&7 Reset dello skript completato."
+		else:
+			loop 20 times:
+				send message ""
+			send message "&7---{@p}&7---"
+			send message "&7&oSkript by: &6DereWah"
+			send message "&7<url:https://t.me/skriptitaly>[&b&lTG&7]<reset> &7<url:https://www.spigotmc.org/members/derewah.240784/>[&e&lSPIGOT&7]<reset> <url:https://dereskripts.tebex.io/>&7[&2&lWEBSITE&7]<reset>"
+			send message "&7------%nl%"
+			send message "{@p} &c/grattaevinci &cgive&4|&cremove&4|&cverify"
+		
+
+function instanceGrattaevinci(id: integer) :: item:
+	set {_item} to {@item}
+	set {_item}'s name to "{@item_name}"
+	set 1st line of {_item}'s lore to "&7&o%{_id}%"
+	if {grattaevinci::%{_id}%::aperto} is not true:
+		set 2nd line of {_item}'s lore to "{@non_grattato}"
+		set {grattaevinci::%{_id}%::aperto} to false
+	else:
+		set 2nd line of {_item}'s lore to "{@grattato}"
+	while size of {grattaevinci::%{_id}%::vincenti::*} < 4:
+		set {_w} to a random integer between 1 and 99
+		if {grattaevinci::%{_id}%::vincenti::*} does not contain {_w}:
+			add {_w} to {grattaevinci::%{_id}%::vincenti::*}
+	while size of {grattaevinci::%{_id}%::numeri::*} < 8:
+		set {_w} to a random integer between 1 and 99
+		if {grattaevinci::%{_id}%::numeri::*} does not contain {_w}:
+			add {_w} to {grattaevinci::%{_id}%::numeri::*}
+	loop 4 times:
+		set {_c} to a random integer between {@min_payout} and {@max_payout}
+		set {_c} to {_c} * 100
+		add {_c} to {grattaevinci::%{_id}%::premi::*}
+	set {grattaevinci::%{_id}%::progress} to 0
+	set {_i} to 0
+	loop 12 times:
+		add 1 to {_i}
+		set {grattaevinci::%{_id}%::viewed::%{_i}%} to false
+	return {_item}
+	
+	
+function openGrattaevinci(p: player, id: integer):
+	set {_gui} to a new chest inventory with 9 row with name "{@p}"
+	set slot 0,1,2,3,4,5,6,7,8,9,11,13,15,17 of {_gui} to yellow stained glass pane named "&6&lNUMERI VINCENTI" with lore "&0%{_id}%"
+	set slot 18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53 of {_gui} to lime stained glass pane named "&a&lI TUOI NUMERI" with lore "&0%{_id}%"
+	set slot 8 of {_gui} to skull of ("MHF_Question" parsed as offline player) named "&c&lTUTORIAL" with lore "{@tutorial}"
+	set {_slot} to 10
+	set {_index} to 1
+	loop 4 times:
+		if {grattaevinci::%{_id}%::viewed::%{_index}%} is false:
+			set slot {_slot} of {_gui} to gold block named "&6&lNUMERO VINCENTE" with lore "&0%{_index}%%nl%&7Gratta per scoprire%nl%&7questo &6numero vincente&7!"
+		else:
+			set slot {_slot} of {_gui} to glowstone named "&6&l%{grattaevinci::%{_id}%::vincenti::%{_index}%}%" with lore "&0%{_index}%%nl%&6&l$&e&l%{grattaevinci::%{_id}%::premi::%{_index}%}%"		
+		add 2 to {_slot}
+		add 1 to {_index}
+	set {_index} to 5
+	set {_slot} to 28
+	loop 4 times:
+		if {grattaevinci::%{_id}%::viewed::%{_index}%} is false:
+			set slot {_slot} of {_gui} to chest named "&a&lTUO NUMERO" with lore "&0%{_index}%%nl%&7Gratta per scoprire%nl%&7il &atuo numero&7!"
+		else:
+			set slot {_slot} of {_gui} to ender chest named "&a&l%{grattaevinci::%{_id}%::numeri::%{_index}-4%}%" with lore "&0%{_index}%%nl%&aTUO NUMERO"
+		add 2 to {_slot}
+		add 1 to {_index}
+	set {_index} to 9
+	set {_slot} to 46
+	loop 4 times:
+		if {grattaevinci::%{_id}%::viewed::%{_index}%} is false:
+			set slot {_slot} of {_gui} to chest named "&a&lTUO NUMERO" with lore "&0%{_index}%%nl%&7Gratta per scoprire%nl%&7il &atuo numero&7!"
+		else:
+			set slot {_slot} of {_gui}  to ender chest named "&a&l%{grattaevinci::%{_id}%::numeri::%{_index}-4%}%" with lore "&0%{_index}%%nl%&aTUO NUMERO"
+		add 2 to {_slot}
+		add 1 to {_index}
+	if {grattaevinci::%{_id}%::progress} >= 12:
+		set slot 4 of {_gui} to diamond block named "&b&lVERIFICA VINCITA" with lore "&7Clicca per verificare la vincita."
+	else:
+		set slot 4 of {_gui} to redstone block named "&c&lVERIFICA VINCITA" with lore "&7Gratta tutto il pezzo prima di verificare."
+	open {_gui} to {_p}
+	
+	
+function verificaGrattaevinci(id: integer) :: integer:
+	set {_prize} to 0
+	loop {grattaevinci::%{_id}%::vincenti::*}:
+		if {grattaevinci::%{_id}%::numeri::*} contains loop-value:
+			add {grattaevinci::%{_id}%::premi::%loop-index%} to {_prize}
+	return {_prize}
+	
+function clearGrattaevinci(id: integer):
+	clear {grattaevinci::%{_id}%::progress}
+	clear {grattaevinci::%{_id}%::aperto}
+	clear {grattaevinci::%{_id}%::vincenti::*}
+	clear {grattaevinci::%{_id}%::numeri::*}
+	clear {grattaevinci::%{_id}%::premi::*}
+	
+	
+	
+on right click with {@item}:
+	if player's tool's name is "{@item_name}":
+		if 2nd line of player's tool's lore is "{@non_grattato}":
+			set {_id} to uncoloured 1st line of player's tool's lore parsed as integer
+			if {grattaevinci::%{_id}%::aperto} is set:
+				openGrattaevinci(player, {_id})
+			else:
+				set player's tool to air
+				send message "{@p} &cQuesto gratta e vinci non è più valido."
+		else:
+			send message "{@p} Questo gratta e vinci è già stato grattato."
+			
+	
+		
+		
+on inventory click:
+	if name of event-inventory is "{@p}":
+		cancel event
+		set {_item} to slot 0 of event-inventory
+		set {_id} to uncoloured 1st line of {_item}'s lore parsed as integer
+		if index of event-slot is 4:
+			if {grattaevinci::%{_id}%::progress} = 12:
+				set 2nd line of player's tool's lore to "{@grattato}"
+				close player's inventory
+				set {grattaevinci::%{_id}%::aperto} to true
+				set {_prize} to verificaGrattaevinci({_id})
+				send message "{@p} &7Questo gratta e vinci ha una vincita di &6&l$&e%{_prize}%&7."
+				grattaevinciPlaySound(player, "entity.player.levelup", 1, 1)
+				if {@autopay} is true:
+					add {_prize} to player's balance
+					set player's tool to air
+					clearGrattaevinci({_id})
+				else:
+					send message "{@p} &7Vai ad una bancarella per riscattarlo."
+					set 2nd line of player's tool's lore to "{@grattato}"
+					set 3rd line of player's tool's lore to "&a&lPREMIO: &6&l$&e%{_prize}%"
+			else:
+				close player's inventory
+				send message "{@p} &cGratta tutto il pezzo prima di verificare!"
+		else if index of event-slot is 10 or 12 or 14 or 16 or 28 or 30 or 32 or 34 or 46 or 48 or 50 or 52:
+			set {_index} to uncoloured 1st line of event-slot's lore parsed as integer
+			if {grattaevinci::%{_id}%::viewed::%{_index}%} is false:
+				add 1 to {grattaevinci::%{_id}%::progress}
+				set {grattaevinci::%{_id}%::viewed::%{_index}%} to true
+				grattaevinciPlaySound(player, "entity.experience_orb.pickup", 1, 1.5)
+				openGrattaevinci(player, {_id})
+				
+function grattaevinciPlaySound(p: player, id: string, v: integer, pitch: number):
+	play sound "minecraft:%{_id}%" at volume {_v} at pitch {_pitch} to {_p}
+	
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
+			
+				

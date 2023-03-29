@@ -1,0 +1,203 @@
+#Thirst 1.2 skript by DereWah -> https://t.me/skriptitaly
+#Language: EN ---> https://t.me/skriptitaly
+#SHOP: https://dereskripts.tebex.io/
+
+#COMMANDS
+#/drink | thirst.use | See how much thirst you are.
+#/drink help | thirst.admin | See a list of all commands for the thirst skript.
+#/drink create <id> <heal_amount> <displayname> | thirst.admin | Create a drink that heals thirst by a custom amount.
+#/drink remove <id> | thirst.admin | Remove a drink
+#/drink list | thirst.admin | Receive a list for all the active drinks
+#/drink get <id> | thirst.admin | receive a drink.
+#/drink debug | thirst.admin | reset the skript variables.
+
+#PERMISSIONS
+#thirst.use | access to the main /drink command.
+#thirst.admin | access to creation of custom drinks.
+#thirst.override | override becoming thirsty for you.
+
+
+
+Options:
+	p: &7[&bThirst&7] #Skript Prefix
+	icon: ||| #this represents a percentage in the bar. You could replace this with [ █ ■ ⬛ ]
+	rate: 60 seconds #Rate at which a player becomes more thirsty
+	delta_thirst: 10 #Amount of thirst a player receives every period of time
+	thirst_damage: 3 #How many HEARTS a player loses when they go on 0 thirst?
+	max_thirst: 100 #What is the maximum amount of thirst a player can have
+	full_bar_color: &b #What is the color of the filled part of the thirst bar?
+	empty_bar_color: &7 #What is the color of the empty part of the thirst bar?
+	water_heal: 20 #How much thirst-heal is given by water?
+	sprint_multiplier: 2 #If a player runs, they will become x times thirstier. (set to 1 to disable)
+	slowness_tier: 3 #how much slowness is given when a player becomes thirsty?
+	low_thirst_amount: 30 #What is the level at which a player becomes really thirsty and will receive effects such as slowness?
+	credits: true #dev credits
+	
+every {@rate}:
+	loop all players:
+		tickThirst(loop-player)
+		
+		
+every 2 seconds:
+	loop all players:
+		displayThirst(loop-player)
+		
+on death:
+	set {thirst::%player%} to {@max_thirst}
+			
+			
+function tickThirst(p: player):
+	if {_p} does not have permission "thirst.override":
+		if {thirst::%{_p}%} is not set:
+			set {thirst::%{_p}%} to {@max_thirst}
+		if {thirst::%{_p}%} > 0:
+			if {_p} is sprinting:
+				remove {@delta_thirst}*{@sprint_multiplier} from {thirst::%{_p}%}
+			else:
+				remove {@delta_thirst} from {thirst::%{_p}%}			
+			if {thirst::%{_p}%} <= {@low_thirst_amount}:
+				apply potion of slowness {@slowness_tier} without particles to {_p} for {@rate}
+		if {thirst::%{_p}%} <= 0:
+			set {thirst::%{_p}%} to 0
+			damage {_p} by {@thirst_damage}	
+	
+
+function displayThirst(p: player):
+	if {thirst::%{_p}%} is not set:
+		set {thirst::%{_p}%} to {@max_thirst}
+	set {_perc} to ({thirst::%{_p}%} / {@max_thirst}) * 100
+	set {_app} to ceil({_perc} / 10)
+	set {_rem} to 10 - {_app}
+	set {_fullbar} to ""
+	set {_emptybar} to ""
+	loop {_app} times:
+		set {_fullbar} to "{@full_bar_color}{@icon}%{_fullbar}%"
+	loop {_rem} times:
+		set {_emptybar} to "{@empty_bar_color}{@icon}%{_emptybar}%"
+	set {_fullbar} to "&bThirst &7[{@full_bar_color}%{_perc}%%%&7] %{_fullbar}%%{_emptybar}%"
+	send action bar "%{_fullbar}%" to {_p}
+	
+
+	
+
+
+
+command /drink [<text>] [<text>] [<integer>] [<text>]:
+	permission: thirst.use
+	aliases: /sete, /thirst, /bevi
+	permission message: {@p} &cYou need the permission &4thirst.use&c to perform this command.
+	usage: {@p} &cCorrect usage: /drink [<create|list|get|remove|debug>]
+	trigger:
+		if arg-1 is not set:
+			send message "&8---{@p}&8---"
+			send message "&bThirst&8: &9%({thirst::%player%} / {@max_thirst}) * 100%%%"
+			send message "&bDrink water to quench your thirst."
+			if player has permission "thirst.admin":
+				send message "&bUse &9&n/drink help&b to receive a list of commands"
+			send message "&bPlugin by &d<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
+			send message "&8---{@p}&8---"
+		else:
+			if player has permission "thirst.admin":
+				if arg-1 is "help" or "aiuto":
+					send message "&8---{@p}&8---"
+					send message "&9/drink create <id_name> <thirst_amount> <display_name>"
+					send message " "
+					send message "&9/drink list"
+					send message " "
+					send message "&9/drink delete <id_name>"
+					send message " "
+					send message "&9/drink get <id_name>"
+					send message "&8---{@p}&8---"
+				else if arg-1 is "create" or "crea" or "fai" or "make":
+					if arg-2 is set:
+						if arg-2 does not contain " ":
+							if {thirst::drinks::*} does not contain uncoloured arg-2 in lowercase:
+								if arg-3 is set:
+									if arg-4 is set:
+										addInstanceDrink(uncoloured arg-2 in lowercase, arg-3, arg-4)
+										send message formatted "{@p} &7The drink %arg-4%&7 has been added."
+									else:
+										send message "{@p} &cAdd a valid Display Name"
+								else:
+									send message "{@p} &cAdd a valid amount of thirst the drink heals."
+							else:
+								send message "{@p} &cThis drink ID is already taken."
+						else:
+							send message "{@p} &cYou can't add spaces to the ID."
+					else:
+						send message "{@p} &cAdd a valid drink id. The ID should be unique."
+				else if arg-1 is "remove":
+					if {thirst::drinks::*} contains uncoloured arg-2 in lowercase:
+						removeInstanceDrink(uncoloured arg-2 in lowercase)
+						send message "{@p} &7The drink has been removed."
+					else:
+						send message "{@p} &cThis drink does not exist."
+				else if arg-1 is "list":
+					if size of {thirst::drinks::*} > 0:
+						send message "&8---{@p}&8---"						
+						loop {thirst::drinks::*}:
+							send message formatted "<command:/drink remove %loop-value%>&7[&c&lX&7] <reset>&b%loop-value% &8|&r %{thirst::drinks::%loop-value%::displayname}% <command:/drink get %loop-value%>&7[&a&lGET&7]<reset>"
+						send message "&8---{@p}&8---"
+					else:
+						send message "{@p} &cThere are no custom drinks. Add one with /drink help"
+				else if arg-1 is "get" or "take" or "prendi" or "ricevi":
+					if {thirst::drinks::*} contains uncoloured arg-2 in lowercase:
+						add 1 of getInstanceFromId(uncoloured arg-2 in lowercase) to player's inventory
+						send message "{@p} &7You received the drink."
+					else:
+						send message "{@p} &cThis drink does not exist."
+				else if arg-1 is "debug" or "reset":
+					clear {thirst::*}
+					send message "{@p} &7The skript has been reset. All the drinks have been erased."
+			else:
+				send message "{@p} &cNo permission."
+				
+				
+function getInstanceFromId(id: text) :: item:
+	set {_item} to water bottle
+	set {_item}'s name to coloured {thirst::drinks::%{_id}%::displayname}
+	set 1st line of {_item}'s lore to "&7%{_id}%"
+	return {_item}
+				
+				
+function addInstanceDrink(id: text, heal: integer, displayname: text):
+	add {_id} to {thirst::drinks::*} 
+	set {thirst::drinks::%{_id}%::heal} to {_heal}
+	set {thirst::drinks::%{_id}%::displayname} to {_displayname}
+	
+	
+function removeInstanceDrink(id: text):
+	if {thirst::drinks::*} contains {_id}:
+		clear {thirst::drinks::%{_id}%::*}
+		remove {_id} from {thirst::drinks::*}
+		
+
+	
+on join:
+	if {thirst::%player%} is not set:
+		set {thirst::%player%} to {@max_thirst}	
+	
+	
+				
+on consume of water bottle:
+	set {_id} to 1st line of event-item's lore
+	if {_id} is set:
+		if {thirst::drinks::*} contains uncoloured {_id}: 
+			add {thirst::drinks::%uncoloured {_id}%::heal} to {thirst::%player%}
+		else:
+			add {@water_heal} to {thirst::%player%}
+	else:
+		add {@water_heal} to {thirst::%player%}
+	if {thirst::%player%} > {@max_thirst}:
+		set {thirst::%player%} to {@max_thirst}
+		
+		
+
+		
+		
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
+	
+

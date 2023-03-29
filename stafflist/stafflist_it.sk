@@ -1,0 +1,84 @@
+#Skript: Stafflist.sk by DereWah-> https://t.me/skriptitaly
+#Versione: 1.0
+#SHOP: https://dereskripts.tebex.io/
+
+#E' vietato condividere lo skript a terzi senza previa autorizzazione.
+
+Options:
+	p: &7[&6&lStaff&cList&7] #Prefix dello skript
+	noprefix: &d&lStaff
+	show_offline: false
+	online_color: &a
+	offline_color: &c
+	credits: true #Invia i crediti dello skript in chat
+	
+#COMANDI SKRIPT:
+#/staff add <player> | derewah.staff | Aggiungi un giocatore alla lista dello staff.
+#/staff remove <player> | derewah.staff | Rimuovi un giocatore dalla lista dello staff.
+#/stafflist | derewah.stafflist | Ricevi la lista dello staff in chat. 
+
+#Se il giocatore che fa il comando /stafflist ha il permesso derewah.staff
+#nella lista accanto al nome ci sarà una X per rimuovere velocemente membri dello staff.
+#Se il giocatore non ha il permesso derewah.staff la X non sarà nel messaggio.
+
+
+command /staff [<text>] [<offlineplayer>]:
+	permission: derewah.iscritto
+	permission message: &cNon hai il permesso &4derewah.staff&c.
+	trigger:
+		if arg-1 is set:
+			if arg-1 is "add":
+				if arg-2 is set:
+					if {staff::*} does not contain arg-2:
+						add arg-2 to {staff::*}
+						send message "{@p} &aHai aggiunto &e%arg-2%&a alla lista staff."
+					else:
+						send message "{@p} &cQuesto giocatore è già nella lista staff."
+				else:
+					send message "{@p} &cSpecifica il giocatore."
+			else if arg-1 is "remove":
+				if arg-2 is set:
+					if {staff::*} contains arg-2:
+						remove arg-2 from {staff::*}
+						send message "{@p} &aHai rimosso &e%arg-2%&a dalla lista staff."
+					else:
+						send message "{@p} &cQuesto giocatore non è nella lista staff."
+				else:
+					send message "{@p} &cSpecifica il giocatore."
+			else:
+				send message "{@p} &c/staff add|remove <player>"
+		else:
+			send message "{@p} &c/staff add|remove <player>"
+				
+command /stafflist:
+	permission: derewah.stafflist
+	permission message: &cNon hai il permesso &4derewah.stafflist&c.
+	trigger:
+		set {_t} to 0
+		loop {staff::*}:
+			if loop-value is online:
+				add 1 to {_t}
+		send message "&7--&a&lSTAFF ATTIVO&8: &6&l%{_t}%&7--"
+		loop {staff::*}:
+			set {_cancel} to false
+			if player has permission "derewah.stafflist":
+				set {_p} to formatted "<tooltip:&7Clicca per rimuovere><cmd:/staff remove %loop-value%>&8&l[&c&lX&8&l]<reset>"
+			else:
+				set {_p} to "&8-"
+			if loop-value is online:
+				set {_c} to "{@online_color}"
+			else:
+				set {_c} to "{@offline_color}"
+				if {@show_offline} is false:
+					set {_cancel} to true
+			if {_cancel} is not true:
+				if length of loop-value's prefix > 0:
+					send message formatted "%{_p}% %loop-value's prefix% &8>&7> %{_c}%%loop-value%"	
+				else:
+					send message formatted "%{_p}% {@noprefix} &8>&7> %{_c}%%loop-value%"					
+				
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
+				

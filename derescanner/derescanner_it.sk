@@ -1,0 +1,84 @@
+#DereScanner_it 1.0 skript by DereWah -> https://t.me/skriptitaly
+#Language: IT
+
+#COMMANDS
+#/derecontrollo | derescan.use | Accesso al comando base
+#/derecontrollo get | derescan.get | Ottieni l'item per il controllo.
+#/derecontrollo accept | derescan.use | Accetta una richiesta di controllo.
+
+
+Options:
+	p: &7[&9&lDere&b&lScanner&7] #Prefisso dello skript
+	item: stick #Item per controlli
+	item_name: &bInventory Scanner #Nome item per i controlli
+	item_lore: &7Click on a player to%nl%&7scan their inventory. #Descrizione item per i controlli
+	expire: 15 #SECONDI | Tempo che ci mette una richiesta di controllo a scadere. Inserisci il NUMERO di secondi.
+	credits: true #Dev credits
+
+
+command /derescan [<text>] [<offlineplayer>]:
+	aliases: /controllo, /scan, /derecheck, /derecontrollo
+	permission: derescan.use
+	permission message: {@p} &cNon hai il permesso &4derescan.use&c.
+	trigger:
+		if arg-1 is "accept":
+			if arg-2 is set:
+				if {derescan::player::%arg-2%::asking::%player%} is true:
+					scanInventory(arg-2, player)
+				else:
+					send message "{@p} &cQuesto giocatore non ha chiesto di controllarti."
+			else:
+				send message "{@p} &cSpecifica il giocatore."
+		else:
+			if player has permission "derescan.get":
+				add 1 of instanceChecker() to player's inventory
+				send message "{@p} &7Hai ricevuto un item per effettuare controlli."
+			else:
+				send message "{@p} &cNon hai il permesso &4derescan.get&c."
+		
+		
+on rightclick on player:
+	if player's tool is instanceScanner():
+		if {derescan::player::%player%::asking::%entity%} is not true:
+			set {derescan::player::%player%::asking::%entity%} to true
+			send message formatted "{@p} &8%player%&7 vuole controllare il tuo inventario. <cmd:/scan accept %player%>&7[&8&lACCETTA&7]<reset>" to entity
+			send message "{@p} &7Hai richiesto di controllare l'inventario di &8%entity%&7." to player
+			set {_c} to 0
+			while {_c} < {@expire}:
+				add 1 to {_c}
+				wait 1 second
+				if {derescan::player::%player%::asking::%entity%} is not true:
+					stop
+			if {derescan::player::%player%::asking::%entity%} is true:
+				clear {derescan::player::%player%::asking::%entity%}
+				send message "{@p} &7La tua richiesta di controllare &8%entity%&7è scaduta." to player
+				send message "{@p} &7La richiesta di &8%player%&7 di controllarti è scaduta." to entity
+		else:
+			send message "{@p} &7Stai già provando a controllare l'inventario di qualcuno..." to player	
+
+function scanInventory(a: offlineplayer, v: offlineplayer):
+	clear {derescan::player::%{_a}%::asking::%{_v}%}
+	
+	set {_gui} to a new chest inventory with 4 row with name "{@p}"
+	set {_x} to 0
+	loop {_v}'s inventory:
+		set slot {_x} of {_gui} to loop-value
+		add 1 to {_x}
+	send message "{@p} &7Ora stai controllando &8%{_v}%&7." to {_a}
+	send message "{@p} &8%{_a}%&7 ti sta controllando." to {_v}
+	open {_gui} to {_a}
+
+function instanceScanner() :: item:
+	set {_item} to {@item}
+	set {_item}'s name to "{@item_name}"
+	set {_item}'s lore to "{@item_lore}"
+	return {_item}
+	
+on inventory click:
+	if event-inventory's name is "{@p}":
+		cancel event
+		
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"

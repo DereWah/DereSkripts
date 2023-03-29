@@ -1,0 +1,924 @@
+#DerePhone 1.2 by DereWah --> https://t.me/skriptitaly
+#SHOP: https://dereskripts.tebex.io/
+#LINGUA: IT
+
+#ATTENZIONE!--------------------------------
+#Apportate modifiche allo skript SOLTANTO tramite le Options qui sotto.
+#Se modificate il codice e lo skript smette di funzionare NON posso farci nulla.
+#Se invece trovate bug nello skript a livello di funzionamento, per favore REPORTATELI
+#scrivendomi in privato su telegram: https://t.me/skriptitaly
+
+#ASSICURATEVI DI STAR USANDO TUTTI I PLUGIN REQUISITI PRIMA DI REPORTARE UN BUG.
+#-------------------------------------------
+
+#REQUISITI---------------------------------
+#Skript 2.6.2 https://skunity.com/downloads
+#Skript-Placeholder: https://forums.skunity.com/resources/skript-placeholders.909/
+#PlaceholderAPI: https://www.spigotmc.org/resources/placeholderapi.6245/
+#WorldEdit & WorldGuard (sennò darà errori)
+#Vault
+#Essentials
+#------------------------------------------
+
+#PLACEHOLDERAPI----------------------------
+#Se vuoi mostrare nella scoreboard (la sidebar a destra dello schermo dei giocatori)
+#il numero di telefono puoi usare il plugin PlaceholderAPI + Skript-Placeholder (controlla le dipendenze sopra
+#per i rispettivi link di download). Dopodiché nel config del tuo plugin delle scoreboard aggiungi il placeholder
+#%phone_number%
+#e avrai in automatico il numero nella sidebar!
+
+#PERMESSI----------------------------------
+#phone.use - Dovrebbero averlo tutti i giocatori, serve ad accedere al comando base /phone
+
+#phone.create: crea numero di telefono
+#phone.delete: rimuovi numero di telefono
+#phone.setminutes: imposta minuti di un player
+#phone.setmessages: imposta messaggi di un player
+#phone.give: per dare telefono
+#^^^^^^^^^^^^^ Tutti questi permessi dovrebbero essere dati al gruppo dell'operatore telefonico.
+
+#phone.admin: per aggiungere località al GPS tramite GUI o per resettare lo skript.
+#------------------------------------------
+
+#COMANDI-----------------------------------
+#/telefono | phone.use | comando base, dare il permesso phone.use al gruppo default.
+#/telefono dai <player> | phone.give | dai il telefono ad un giocatore
+#/telefono crea <player> | phone.create | crea un numero di telefono per un giocatore.
+#/telefono blocca <player> | phone.delete | blocca il numero di telefono per un giocatore.
+#/telefono minuti <player> | phone.setminutes | imposta i minuti di un giocatore.
+#/telefono messaggi <player> | phone.setmessages | imposta i messaggi di un giocatore.
+#/telefono aggiungi <numero> | phone.use | aggiungi un numero di telefono in rubrica.
+#/telefono modifica <numero> <nome> | phone.use | cambia il nome di un numero in rubrica.
+#/telefono chiama <numero> | phone.use | chiama un giocatore.
+#/telefono invia <numero> <messaggio> | phone.use | invia un messaggio ad un giocatore
+#/telefono esci | phone.use | chiudi la chiamata in corso.
+#/telefono debug | phone.admin | resetta lo skript. Eliminerai tutti i numeri di telefono, le rubriche, i messaggi e le impostazioni dei giocatori.
+#/telefono addgps <nome_località> <ID del blocco in GUI>| phone.admin | aggiungi una località nel GPS.
+#!!!Non puoi usare spazi nel nome della località. USA invece gli spazi nell'item della GUI.!!!
+
+
+
+Options:
+	p: &7[&e&lDEREPHONE&7] #Prefix dello skript
+	
+	phone_item: stick #item che rappresenta il telefono
+	phone_name: &f&liPhone 4S #Nome del telefono
+	phone_lore: &7Click destro per aprire il telefono. #Descrizione del telefono
+	ticket_item: paper #item che rappresenta il biglietto che puoi ritirare quando clicchi sul tuo numero di telefono.
+	
+	GPS: &e&lGPS #Nome dell'applicazione GPS
+	GPSGUI: &8GPS
+	ComandoGPS: GPS start
+	
+	Messenger: &bMessenger #nome dell'applicazione MESSENGER
+	NewMessagesGui: &8Nuovi messaggi #Nome della GUI dell'applicazione nuovi messaggi per messenger
+	MessengerGui: &8Messenger #Nome della GUI dell'applicazione MESSENGER
+
+	Phone: &aTelefono #Nome dell'applicazione per le chiamate
+	CallsGui: &8Chiamate #Nome della GUI per le chiamate.
+
+	AddressBook: &eRubrica #Nome dell'applicazione per la rubrica
+	AddressBookGui: &8Rubrica #Nome della GUI dell'applicazione Rubrica	
+	
+	number_prefix: 331 #Primi 3 numeri con cui iniziano TUTTI i numeri di telefono.
+	nonumber: &7Nessun numero. #Cosa viene mostrato quando un giocatore non ha un numero di telefono.
+	
+	Street_Region: strada #Nome della region impostata per la strada.
+#							Per vedere come si chiama fai ./rg info stando in strada. Se non hai una region settata metti quello che vuoi.
+	
+	Police: &bChiama &b&lPOLIZIA #Nome del pulsante per chiamare la Polizia
+	Police_lore: &7Avverti la Polizia. #Descrizione del pulsante per chiamare la polizia
+	Police_permission: phone.police #Permesso dei poliziotti
+	
+	Firefighters: &cChiama &c&lVIGILI DEL FUOCO #Nome del pulsante per chiamare i vigili del fuoco
+	Firefighters_lore: &7Avverti i vigili del fuoco. #Descrizione del pulsante per chiamare i vigili del fuoco
+	Firefighters_permission: phone.firefighters #Permesso dei vigili del fuoco
+	
+	Ambulance: &fChiama &f&lAMBULANZA #Nome del pulsante per chiamare l'ambulanza
+	Ambulance_lore: &7Avverti un'ambulanza. #Descrizione del pulsante per chiamare l'ambulanza
+	Ambulance_permission: phone.ambulance #Permesso dell'ambulanza
+	
+	Taxi: &eChiama &e&lTAXI #Nome del pulsante per chiamare un taxi
+	Taxi_lore: &7Chiama un taxi. #Descrizione del pulsante per chiamare il taxi
+	Taxi_permission: phone.taxi #Permesso dei tassisti
+	
+	Staff: &dChiama &d&lSTAFF #Nome del pulsante per chiamare lo staff
+	Staff_lore: &7Avverti lo staff. #Descrizione del pulsante per chiamare lo staff
+	Staff_permission: phone.staff #Permesso dello staff
+	
+	Custom: &7Digita &7&lNUMERO #Nome del pulsante per digitare un numero
+	Custom_lore: &7Scrivi il numero al momento. #Descrizione del pulsante per digitare un numero.
+	
+	credits: true #credits per il dev dello skript. 
+	
+
+
+
+
+
+	
+	
+
+
+
+
+
+#main startfold
+
+
+on placeholderapi placeholder request for the prefix "phone":
+	if the identifier is "number": # The placeholder would be 'custom_message'
+		if {phone::user::%player%::number} is set:
+			set the result to "%{phone::user::%player%::number}%"
+		else:
+			set the result to uncoloured "{@nonumber}"
+		
+
+
+command /phone [<text>] [<text>] [<text>]:
+	aliases: /telefono
+	permission: phone.use
+	trigger:
+		if arg-1 is "give" or "get" or "dai" or "fai":
+			if player has permission "phone.give":
+				set {_target} to arg-2 parsed as player
+				if {_target} is set:
+					add 1 of instancePhone() to {_target}
+					send message "{@p} &7Hai dato un telefono a %{_target}%"
+					send message "{@p} &7Hai ricevuto un telefono." to {_target}
+				else:
+					send message "{@p} &cSpecifica il giocatore a cui dare un telefono."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.give&c."
+		else if arg-1 is "debug":
+			if player has permission "phone.admin":
+				send message "{@p} &7Reset variabili di %size of {phone::numbers::*}% giocatori in corso.%nl%{@p} &7Potrebbero volerci alcuni secondi..."
+				loop {phone::gps::*}:
+					delete {phone::gps::%loop-value%::block}
+					remove loop-value from {phone::gps::*}
+				clear {phone::gps::*}
+				loop {phone::numbers::*}:
+					clear {phone::numbers::%loop-value%::user}
+					remove loop-value from {phone::numbers::*}
+				clear {phone::numbers::*}
+				loop {phone::user::*}:
+					clear {phone::user::%loop-value%::number}
+					clear {phone::user::%loop-value%::minutes}					
+					clear {phone::user::%loop-value%::messages}
+					loop {phone::user::%loop-value%::rubrica::*}:
+						clear {phone::user::%loop-value-1%::rubrica::%loop-value-2%::name}
+						remove loop-value-2 from {phone::user::%loop-value-1%::rubrica::*}
+					loop {phone::user::%loop-value%::messages::*}:
+						clear {phone::user::%loop-value-1%::messages::%loop-value-2%::*}
+						remove loop-value-2 from {phone::user::%loop-value-1%::messages::*}
+					clear {phone::user::%loop-value%::preferences::pings}
+					clear {phone::user::%loop-value%::calling}
+					clear {phone::user::%loop-value%::receiving}
+					remove loop-value from {phone::user::*}
+				clear {phone::user::*}
+				send message "{@p} &7Variabili resettate."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.admin&c."
+		else if arg-1 is "addgps" or "aggiungigps":
+			if player has permission "phone.admin":
+				set {_locname} to uncoloured arg-2
+				set {_block} to arg-3 parsed as item
+				if {_locname} is set:
+					if {_block} is not set:
+						set {_block} to stone
+					if size of {phone::gps::*} < 27:
+						if {phone::gps::*} does not contain {_locname}:
+							add {_locname} to {phone::gps::*}
+							set {phone::gps::%{_locname}%::block} to "%{_block}%"
+							send message "{@p} &7La località %{_locname}% è stata aggiunta."
+							open phoneMenu(player) to player								
+						else:
+							send message "{@p} &cQuestà località esiste già."
+					else:
+						send message "{@p} &cHai raggiunto il limite massimo di località."
+				else:
+					send message "{@p} &cInserisci il nome della località GPS."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.admin&c."
+		else if arg-1 is "removegps" or "rimuovigps":
+			if player has permission "phone.admin":
+				set {_locname} to uncoloured arg-2		
+				if {_locname} is set:
+					if {phone::gps::*} contains {_locname}:
+						clear {phone::gps::%{_locname}%::block}
+						remove {_locname} from {phone::gps::*}
+						send message "{@p} &7La località %{_locname}% è stata rimossa."
+					else:
+						send message "{@p} &cQuesta località non esiste."
+				else:
+					send message "{@p} &cSpecifica la località da rimuovere."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.admin&c."
+					
+		else if arg-1 is "create" or "creanumero" or "fainumero" or "crea":
+			if player has permission "phone.create":
+				set {_target} to arg-2 parsed as offline player
+				if {_target} is set:
+					if {phone::user::%{_target}%::number} is not set:
+						makeRandomNumber({_target})
+						send message "{@p} &7Il numero di %{_target}% è stato creato."
+					else:
+						send message "{@p} &c%{_target}% ha già un numero di telefono."
+				else:
+					send message "{@p} &cSpecifica il giocatore a cui creare un numero."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.create&c."
+		else if arg-1 is "delete" or "remove" or "elimina" or "block" or "blocca" or "rimuovi":
+			if player has permission "phone.delete":
+				set {_target} to arg-2 parsed as player
+				if {_target} is set:
+					if {phone::user::%{_target}%::number} is set:
+						clear {phone::numbers::%{phone::user::%{_target}%::number}%::user}
+						clear {phone::user::%{_target}%::number}
+						set {phone::user::%{_target}%::minutes} to 0
+						set {phone::user::%{_target}%::messages} to 0
+						send message "{@p} &7Il numero di %{_target}% è stato rimosso."
+						send message "{@p} &7Il tuo numero è stato bloccato." to {_target}
+					else:
+						send message "{@p} &cQuesto numero non esiste."
+				else:
+					send message "{@p} &cSpecifica il giocatore a cui eliminare il numero."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.delete&c."
+		else if arg-1 is "setminutes" or "minutes" or "impostaminuti" or "minuti":
+			if player has permission "phone.setminutes":
+				set {_target} to arg-2 parsed as player
+				set {_amount} to arg-3 parsed as integer
+				if {_target} is set:
+					if {_amount} is set:
+						set {phone::user::%{_target}%::minutes} to {_amount}
+						send message "{@p} &7Hai impostato i minuti di %{_target}% a %{_amount}%"
+					else:
+						send message "{@p} &cInserisci una quantità di minuti valida."
+				else:
+					send message "{@p} &cSpecifica il giocatore a cui impostare i minuti."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.setminutes&c."					
+		else if arg-1 is "setmessages" or "messages" or "impostamessaggi" or "messaggi":
+			if player has permission "phone.setmessages":
+				set {_target} to arg-2 parsed as player
+				set {_amount} to arg-3 parsed as integer
+				if {_target} is set:
+					if {_amount} is set:
+						set {phone::user::%{_target}%::messages} to {_amount}
+						send message "{@p} &7Hai impostato i messaggi di %{_target}% a %{_amount}%"
+					else:
+						send message "{@p} &cInserisci una quantità di messaggi valida."
+				else:
+					send message "{@p} &cSpecifica il giocatore a cui impostare i messaggi."
+			else:
+				send message "{@p} &cNon hai il permesso &4phone.setmessages&c."
+		else if player's inventory contains instancePhone():					
+			if arg-1 is "addnumber" or "aggiunginumero" or "aggiungi" or "add":
+				set {_numero} to arg-2
+				if length of "%{_numero}%" = 10:
+					if {_numero} matches "[0-9]+":
+						if {phone::user::%player%::rubrica::*} does not contain {_numero}:
+							add {_numero} to {phone::user::%player%::rubrica::*}
+							set {phone::user::%player%::rubrica::%{_numero}%::name} to "Nuovo contatto"
+							set {_holder} to paper
+							set 2nd line of {_holder} to "{_numero}"
+							send message "{@p} &7Hai salvato questo contatto."
+							open rubricaMenu(player) to player
+						else:
+							send message "{@p} &cHai già salvato questo contatto."
+					else:
+						send message "{@p} &cIl numero non deve contenere spazi, trattini o lettere."
+				else:
+					send message "{@p} &cIl numero è composto da 10 numeri."
+			else if arg-1 is "editname" or "modificacontatto" or "modifica" or "edit":
+				set {_numero} to arg-2
+				if {phone::user::%player%::rubrica::*} contains {_numero}:
+					set {_nome} to "Nuovo contatto"
+					if arg-3 is set:
+						set {_nome} to arg-3
+					set {phone::user::%player%::rubrica::%{_numero}%::name} to {_nome}
+					send message "{@p} &7Hai modificato questo contatto."
+					open rubricaMenu(player) to player
+				else:
+					send message "{@p} &cNon hai salvato questo contatto."
+			else if arg-1 is "send" or "sendmessage" or "invia" or "inviamessaggio" or "messaggia":
+				set {_numero_target} to arg-2
+				set {_messaggio} to arg-3
+				if GetNumberFromUser(player) is set:
+					if {phone::user::%player%::messages} > 0:
+						if GetUserFromNumber({_numero_target}) is set:
+							if length of "%{_numero_target}%" = 10:				
+								if {_numero_target} matches "[0-9]+":
+									if size of {phone::user::%GetUserFromNumber({_numero_target})%::messages::*} < 27:
+										if {phone::user::%GetUserFromNumber({_numero_target})%::messages::*} does not contain GetNumberFromUser(player):
+											add GetNumberFromUser(player) to {phone::user::%GetUserFromNumber({_numero_target})%::messages::*}
+										if size of {phone::user::%GetUserFromNumber({_numero_target})%::messages::%GetNumberFromUser(player)%::*} <= 10:
+											remove 1 from {phone::user::%player%::messages}
+											add {_messaggio} to {phone::user::%GetUserFromNumber({_numero_target})%::messages::%GetNumberFromUser(player)%::*}
+											send message "{@p} &7Messaggio inviato a %{_numero_target}%"
+											messengerPrompt(player)
+											if GetUserFromNumber({_numero_target}) is online:
+												if {phone::user::%GetUserFromNumber({_numero_target})%::preferences::pings} is true:
+													send message "{@p} {@Messenger}&7: Hai una nuova notifica!" to "%GetUserFromNumber({_numero_target})%" parsed as player
+										else:
+											send message "{@p} &cHai inviato troppi messaggi a questo numero. Aspetta che il proprietario elimini i tuoi messaggi più vecchi."
+									else:
+										send message "{@p} &cQuesto numero ha la casella di messaggi piena. Aspetta che la svuoti per inviare messaggi."
+								else:
+									send message "{@p} &cNumero non valido."
+							else:
+								send message "{@p} &cNumero non valido."
+						else:
+							send message "{@p} &cQuesto numero non è attivo."
+					else:
+						send message "{@p} &cNon hai più credito."
+				else:
+					send message "{@p} &cNon hai un numero di telefono attivo."
+			else if arg-1 is "call" or "chiama":
+				set {_numero_target} to arg-2
+				if GetNumberFromUser(player) is set:
+					if GetUserFromNumber({_numero_target}) is not player:
+						if GetUserFromNumber({_numero_target}) is set:
+							if GetUserFromNumber({_numero_target}) is online:
+								SendCall(player, GetUserFromNumber({_numero_target}))
+							else:
+								send message "{@p} &cQuesto telefono è spento."
+						else:
+							send message "{@p} &cNumero non attivo."
+					else:
+						send message "{@p} &cNon puoi chiamare te stesso."
+				else:
+					send message "{@p} &cNon hai un numero attivo."
+			else if arg-1 is "leave" or "quit" or "exit" or "abandon" or "esci" or "abbandona" or "chiudi":
+				leaveCall(player, false)
+			else:
+				send message "{@p} &c/telefono <aggiungi|modifica|chiama|invia|esci>"
+		else:
+			send message "{@p} &cNon hai un telefono nell'inventario."
+							
+on right click with {@phone_item}:
+	if player's tool is instancePhone():
+		open phoneMenu(player) to player
+
+
+on right click with {@ticket_item}:
+	if 4th line of player's tool's lore is "&7(Click tasto destro per aggiungere ai contatti.&7)":
+		set {_name} to uncoloured 1st line of player's tool's lore
+		set {_numb} to uncoloured 2nd line of player's tool's lore
+		make player execute "phone addnumber %{_numb}%"
+		make player execute "phone editname %{_numb}% %{_name}%"
+		set player's tool to air
+							
+					
+function instancePhone() :: item:
+	set {_item} to "{@phone_item}" parsed as item
+	if {_item} is not set:
+		set {_item} to stick
+	set {_item}'s name to "{@phone_name}"
+	set 1st line of {_item}'s lore to "{@phone_lore}"
+	return {_item}
+	
+function instanceTicket(p: player, numb: text) :: item:
+	set {_item} to "{@ticket_item}" parsed as item
+	if {_item} is not set:
+		set {_item} to paper
+	set {_item}'s name to "&7Numero di &e%{_p}%"
+	set {_item}'s lore to formatted "&8%{_p}%%nl%&6%{_numb}%%nl%%nl%&7(Click tasto destro per aggiungere ai contatti.&7)"
+	return {_item}
+					
+function makeRandomNumber(p: offlineplayer):
+	set {_num} to {@number_prefix}
+	loop 7 times:
+		set {_x} to a random integer between 0 and 9
+		set {_num} to "%{_num}%%{_x}%"
+	if {phone::numbers::*} does not contain {_num}:
+		add {_num} to {phone::numbers::*}
+		set {phone::numbers::%{_num}%::user} to {_p}
+		set {phone::user::%{_p}%::number} to {_num} 
+		send message "{@p} &7Il tuo numero di telefono ora è &e%{phone::user::%{_p}%::number}%&7." to {_p}
+
+function GetUserFromNumber(numero: text) :: offlineplayer:
+	if {phone::numbers::*} contains {_numero}:
+		set {_user} to "%{phone::numbers::%{_numero}%::user}%" parsed as offline player
+	return {_user}
+	
+function GetNumberFromUser(p: offlineplayer) :: text:
+	if {phone::user::%{_p}%::number} is set:
+		set {_numero} to {phone::user::%{_p}%::number}
+	return {_numero}
+
+function GetCoordsFromLoc(l: location) :: text:
+	set {_x} to {_l}'s x-coordinate
+	set {_y} to {_l}'s y-coordinate
+	set {_z} to {_l}'s z-coordinate
+	return "%{_x}% %{_y}% %{_z}%"
+
+function phoneMenu(p: player) :: inventory:
+	if {phone::user::%{_p}%::minutes} is not set:
+		set {phone::user::%{_p}%::minutes} to 0
+	if {phone::user::%{_p}%::messages} is not set:
+		set {phone::user::%{_p}%::messages} to 0
+	set {_numb} to GetNumberFromUser({_p})
+	if {_numb} is not set:
+		set {_numb} to "{@nonumber}"
+	set {_gui} to a new chest inventory with 4 row with name "&8Telefono di %{_p}%"
+	set slot 20 of {_gui} to skull of ("BlockminersTV" parsed as an offline player) named "{@GPS}" with lore "&7Apri l'applicazione del GPS."
+	set slot 11 of {_gui} to skull of ("Inbox" parsed as an offline player) named "{@Messenger}" with lore "&7Apri l'applicazione Messenger."
+	set slot 12 of {_gui} to skull of ("phumicek" parsed as an offline player) named "{@Phone}" with lore "&7Apri l'applicazione Telefono."
+	set slot 13 of {_gui} to skull of ("G00gle_" parsed as an offline player) named "{@AddressBook}" with lore "&7Apri l'applicazione Rubrica."
+	set slot 15 of {_gui} to golden nugget named "&6Credito residuo" with lore "&7↪ &e&l%{phone::user::%{_p}%::minutes}% &eminuti" and "&7↪ &e&l%{phone::user::%{_p}%::messages}% &emessaggi"
+	set slot 24 of {_gui} to paper named "&7Numero di %{_p}%" with lore "&e%{_numb}%"
+	if {_p} does not have permission "phone.admin":
+		set slot 21 of {_gui} to white stained glass pane named "&8Telefono di %{_p}%" with lore "&7Skript by &bDereWah%nl%&bTG&8: &f@SkriptItaly"
+	else:
+		set slot 21 of {_gui} to white stained glass pane named "&8Telefono di %{_p}%"
+	if {phone::user::%{_p}%::preferences::pings} is true:
+		set slot 22 of {_gui} to lime stained glass pane named "&aNotifiche &a&lON" with lore "&7Riceverai notifiche del telefono in chat.%nl%%nl%&c(Clicca per disattivare)"
+	else:
+		set slot 22 of {_gui} to red stained glass pane named "&cNotifiche &c&lOFF" with lore "&7Non riceverai notifiche del telefono in chat.%nl%%nl%&a(Clicca per attivare)"		
+	return {_gui}
+#endfold
+
+#RUBRICA startfold
+	
+	
+function rubricaMenu(p: player) :: inventory:
+	set {_gui} to a new chest inventory with 4 row with name "{@AddressBookGui}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 0 of {_gui}  to lime stained glass pane named "&a&lAGGIUNGI"
+	set slot 1,2,3,4,5,6,7 of {_gui} to yellow stained glass pane named "{@AddressBook}"
+	set {_x} to 9
+	loop {phone::user::%{_p}%::rubrica::*}:
+		set slot {_x} of {_gui} to paper named "&6%{phone::user::%{_p}%::rubrica::%loop-value%::name}%" with lore "&7Numero:" and "&e%loop-value%" and "&7(Click tasto sinistro per cambiare nome)" and "&c(Click tasto destro per rimuovere)"
+		add 1 to {_x}
+	return {_gui}
+	
+	
+function rubricaRemove(p: player, t: item):
+	set {_numero} to uncoloured 2nd line of {_t}'s lore
+	remove {_numero} from {phone::user::%{_p}%::rubrica::*}
+	clear {phone::user::%{_p}%::rubrica::%{_numero}%::name}
+	send message "{@p} &7Hai rimosso il numero." to {_p}
+	close {_p}'s inventory
+	open rubricaMenu({_p}) to {_p}
+	
+	
+function rubricaEdit(p: player, t: item):
+	set {_numero} to uncoloured 2nd line of {_t}'s lore
+	close {_p}'s inventory
+	send message formatted "<sgt:/phone editname %{_numero}% >&7[&e&lCLICCA PER MODIFICARE IL CONTATTO&7]" to {_p}	
+	
+function rubricaAdd(p: player):
+	if size of {phone::user::%{_p}%::rubrica::*} >= 27:
+		send message "&cHai raggiunto il massimo numero di contatti." to {_p}
+	else:
+		close {_p}'s inventory
+		send message "<sgt:/phone addnumber >&7[&a&lCLICCA PER AGGIUNGERE UN CONTATTO&7]" to {_p}
+		
+#endfold
+
+#MESSENGER startfold
+
+on join:
+	wait 1 second
+	if {@credits} is true:
+		if player does not have permission "phone.admin":
+			send message "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
+	
+function messengerPrompt(p: player):
+	set {_gui} to a new chest inventory with 4 row with name "{@MessengerGui}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 0 of {_gui} to yellow stained glass pane named "{@AddressBook}"
+	set slot 1,2,3,4,5,6,7 of {_gui} to light blue stained glass pane named "{@Messenger}"
+	set slot 20 of {_gui} to lime wool named "&aScrivi un messaggio"
+	set slot 24 of {_gui} to light blue wool named "&bLeggi messaggi"
+	open {_gui} to {_p}
+	
+	
+function messengerList(p: player):
+	set {_gui} to a new chest inventory with 4 row with name "{@NewMessagesGui}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 0 of {_gui} to yellow stained glass pane named "{@AddressBook}"
+	set slot 1,2,3,5,6,7 of {_gui} to light blue stained glass pane named "{@Messenger}"
+	set slot 4 of {_gui} to barrier named "&c&lSVUOTA MESSAGGI" with lore "&7Elimina tutti i messaggi."
+	set {_x} to 9
+	loop {phone::user::%{_p}%::messages::*}:
+		set {_mittente} to loop-value
+		set {_messages} to ""
+		loop {phone::user::%{_p}%::messages::%{_mittente}%::*}:
+			set {_messages} to "&7%loop-value-2%%nl%%nl%%{_messages}%"
+		set {_name} to "&6Numero sconosciuto"
+		if {phone::user::%{_p}%::rubrica::*} contains {_mittente}:
+			set {_name} to "&6%{phone::user::%{_p}%::rubrica::%{_mittente}%::name}%"
+		set slot {_x} of {_gui} to paper named "%{_name}%" with lore "&b%{_mittente}%%nl%%nl%&7(Click tasto sinistro per rispondere)%nl%&c(Click tasto destro per eliminare)%nl%%nl%%{_messages}%"
+		add 1 to {_x}
+	open {_gui} to {_p}
+
+	
+function messengerMenu(p: player):
+	set {_gui} to a new chest inventory with 4 row with name "{@MessengerGui}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 0 of {_gui} to yellow stained glass pane named "{@AddressBook}"
+	set slot 1,2,3,5,6,7 of {_gui} to light blue stained glass pane named "{@Messenger}"
+	set slot 4 of {_gui} to diamond block named "&bClicca su un contatto per inviargli un messaggio."
+	set {_x} to 9
+	loop {phone::user::%{_p}%::rubrica::*}:
+		set slot {_x} of {_gui} to paper named "&6%{phone::user::%{_p}%::rubrica::%loop-value%::name}%" with lore "&7Numero:" and "&e%loop-value%" and "&7(Click tasto sinistro per messaggiare)"
+		add 1 to {_x}
+	open {_gui} to {_p}
+	
+function messengerSend(p: player, t: item):
+	set {_numero} to uncoloured 2nd line of {_t}'s lore
+	if {_numero} is "":
+		set {_numero} to uncoloured 1st line of {_t}'s lore		
+	close {_p}'s inventory
+	send message formatted "<sgt:/phone sendmessage %{_numero}% >&7[&b&lCLICCA PER INVIARE UN MESSAGGIO&7]<reset>" to {_p}
+	
+	
+function removeMessage(p: player, t: item):
+	set {_numero} to uncoloured 1st line of {_t}'s lore
+	clear {phone::user::%{_p}%::messages::%{_numero}%::*}
+	remove {_numero} from {phone::user::%{_p}%::messages::*}
+	close {_p}'s inventory
+	messengerList({_p})
+	send message "{@p} &7Hai svuotato i messaggi da %{_numero}%." to {_p}
+	
+	
+function emptyMessages(p: player):
+	if size of {phone::user::%{_p}%::messages::*} > 0:
+		loop {phone::user::%{_p}%::messages::*}:
+			set {_numero} to loop-value
+			clear {phone::user::%{_p}%::messages::%{_numero}%::*}
+			remove {_numero} from {phone::user::%{_p}%::messages::*}
+		clear {phone::user::%{_p}%::messages::*}
+		send message "{@p} &7Hai svuotato tutti i messaggi." to {_p}
+		close {_p}'s inventory
+		messengerList({_p})
+	else:
+		send message "{@p} &cLa tua casella è vuota." to {_p}
+
+	
+#endfold
+
+#TELEFONO startfold
+
+
+function callsMenu(p: player) :: inventory:
+	set {_gui} to a new chest inventory with 4 row with name "{@CallsGui}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 10 of {_gui} to skull of ("lala25" parsed as an offline player) named "{@Police}" with lore "&7{@Police_lore}"
+	set slot 12 of {_gui} to skull of ("haohanklliu" parsed as an offline player) named "{@Firefighters}" with lore "{@Firefighters_lore}"
+	set slot 14 of {_gui} to skull of ("Omanoctoa" parsed as an offline player) named "{@Ambulance}" with lore "{@Ambulance_lore}"
+	set slot 20 of {_gui} to skull of ("403" parsed as an offline player) named "{@Taxi}" with lore "{@Taxi_lore}"
+	set slot 22 of {_gui} to skull of ("2amSkypeCall" parsed as an offline player) named "{@Staff}" with lore "{@Staff_lore}"
+	set slot 16 of {_gui} to skull of ("G00gle_" parsed as an offline player) named "{@AddressBook}" with lore "&7Chiama un contatto."
+	set slot 25 of {_gui} to skull of ("Hack" parsed as an offline player) named "{@Custom}" with lore "{@Custom_lore}"
+	return {_gui}
+
+
+
+function CallPolice(p: player):
+	close {_p}'s inventory
+	set {_rg::*} to regions at {_p}
+	set {_success} to false
+	loop {_rg::*}:
+		if "%loop-value%" does not contain "{@Street_Region}":
+			set {_success} to true
+			set {_region} to loop-value
+			exit loop
+	loop all players:
+		if loop-player has permission "{@Police_permission}":
+			send message "{@p} &c&l%{_p}%&c ha chiamato la polizia.%nl%{@p} &cCoordinate: %GetCoordsFromLoc(location of {_p})%" to loop-player
+			if {_success} is true:
+				send message formatted "{@p} &cPosizione: &c&l%{_region}%" to loop-player
+	send message "{@p} &cHai richiesto l'intervento della polizia." to {_p}
+
+
+function CallFireFighers(p: player):
+	close {_p}'s inventory
+	set {_rg::*} to regions at {_p}
+	set {_success} to false
+	loop {_rg::*}:
+		if "%loop-value%" does not contain "{@Street_Region}":
+			set {_success} to true
+			set {_region} to loop-value
+			exit loop
+	loop all players:
+		if loop-player has permission "{@Firefighters_permission}":
+			send message "{@p} &6&l%{_p}%&6 ha richiesto i vigili del fuoco.%nl%{@p} &6Coordinate: %GetCoordsFromLoc(location of {_p})%" to loop-player
+			if {_success} is true:
+				send message formatted "{@p} &6Posizione: &6&l%{_region}%" to loop-player
+	send message "{@p} &cHai chiamato i pompieri." to {_p}
+
+function CallAmbulance(p: player):
+	close {_p}'s inventory
+	set {_rg::*} to regions at {_p}
+	set {_success} to false
+	loop {_rg::*}:
+		if "%loop-value%" does not contain "{@Street_Region}":
+			set {_success} to true
+			set {_region} to loop-value
+			exit loop
+	loop all players:
+		if loop-player has permission "{@Ambulance_permission}":
+			send message "{@p} &f&l%{_p}%&f ha richiesto un'ambulanza.%nl%{@p} &fCoordinate: %GetCoordsFromLoc(location of {_p})%" to loop-player
+			if {_success} is true:
+				send message formatted "{@p} &fPosizione: &f&l%{_region}%" to loop-player
+	send message "{@p} &cHai chiamato un'ambulanza." to {_p}
+
+function CallTaxi(p: player):
+	close {_p}'s inventory
+	set {_rg::*} to regions at {_p}
+	set {_success} to false
+	loop {_rg::*}:
+		if "%loop-value%" does not contain "{@Street_Region}":
+			set {_success} to true
+			set {_region} to loop-value
+			exit loop
+	loop all players:
+		if loop-player has permission "{@Taxi_permission}":
+			send message "{@p} &e&l%{_p}%&e ha richiesto un taxi.%nl%{@p} &eCoordinate: %GetCoordsFromLoc(location of {_p})%" to loop-player
+			if {_success} is true:
+				send message formatted "{@p} &ePosizione: &e&l%{_region}%" to loop-player
+	send message "{@p} &cHai chiamato un taxi." to {_p}
+
+function CallStaff(p: player):
+	send message "%region at {_p}%" to {_p}
+	close {_p}'s inventory
+	set {_rg::*} to region at location of {_p}
+	set {_success} to false
+	loop all players:
+		if loop-player has permission "{@Staff_permission}":
+			send message formatted "{@p} &e&l%{_p}%&6 ha richiesto uno staffer. <command:/tp %{_p}%>&7[&c&lTELEPORT&7]<reset>" to loop-player
+	send message "{@p} &cHai chiamato uno staffer." to {_p}
+	
+	
+function CallsList(p: player):
+	set {_gui} to a new chest inventory with 4 row with name "{@CallsGui}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 0 of {_gui} to yellow stained glass pane named "{@AddressBook}"
+	set slot 1,2,3,5,6,7 of {_gui} to lime stained glass pane named "{@Phone}"
+	set slot 4 of {_gui} to emerald block named "&aClicca su un contatto per chiamarlo."
+	set {_x} to 9
+	loop {phone::user::%{_p}%::rubrica::*}:
+		set slot {_x} of {_gui} to paper named "&6%{phone::user::%{_p}%::rubrica::%loop-value%::name}%" with lore "&7Numero:" and "&e%loop-value%" and "&7(Click tasto sinistro per chiamare)"
+		add 1 to {_x}
+	open {_gui} to {_p}
+	
+	
+function CallNumber(p: player, t: item):
+	close {_p}'s inventory
+	set {_number} to uncoloured 2nd line of {_t}'s lore
+	make {_p} execute "phone call %{_number}%"
+	
+function isInCall(p: player) :: boolean:
+	if {phone::user::%{_p}%::calling} is not set:
+		if {phone::user::%{_p}%::receiving} is not set:
+			return false
+		else:
+			return true
+	else:
+		return true
+	
+function SendCall(c: player, r: player):
+	if {_c}'s tool is instancePhone():
+		if {_r}'s inventory contains instancePhone():
+			if isInCall({_c}) is false:
+				if {phone::user::%{_r}%::calling} is not {_c}:
+					if {phone::user::%{_c}%::minutes} > 0:
+						remove 1 from {phone::user::%{_c}%::minutes}
+						set {phone::user::%{_c}%::calling} to {_r}
+						send message formatted "{@p} &8%{_c}% &7ti sta chiamando... &7[<command:/phone call %GetNumberFromUser({_c})%>&c&lACCETTA&7]<reset>&7" to {_r}
+						send message formatted "{@p} &7Stai chiamando &8%{_r}%&7..." to {_c}
+						wait 10 seconds
+						if {phone::user::%{_c}%::calling} is not {_r}:
+							stop
+						send message formatted "{@p} &7Stai chiamando &8%{_r}%&7..." to {_c}						
+						send message formatted "{@p} &8%{_c}% &7ti sta chiamando... &7[<command:/phone call %GetNumberFromUser({_c})%>&c&lACCETTA&7]<reset>&7" to {_r}
+						wait 10 seconds
+						if {phone::user::%{_c}%::calling} is not {_r}:
+							stop
+						send message formatted "{@p} &7Stai chiamando &8%{_r}%&7..." to {_c}					
+						send message formatted "{@p} &8%{_c}% &7ti sta chiamando... &7[<command:/phone call %GetNumberFromUser({_c})%>&c&lACCETTA&7]<reset>&7" to {_r}
+						wait 10 seconds
+						if {phone::user::%{_c}%::calling} is not {_r}:
+							stop
+						send message formatted "{@p} &8%{_r}% &7non ha risposto..."  to {_c}				
+						clear {phone::user::%{_c}%::calling}
+						clear {phone::user::%{_r}%::calling}
+					else:
+						send message "{@p} &cNon hai abbastanza minuti." to {_c}
+				else:
+					clear {phone::user::%{_c}%::calling}
+					clear {phone::user::%{_r}%::calling}
+					set {phone::user::%{_c}%::receiving} to {_r}
+					set {phone::user::%{_r}%::receiving} to {_c}	
+					send message "{@p} &8%{_c}%&7 ha accettato la tua chiamata." to {_r}
+					send message "{@p} &7hai accettato la chiamata di &8%{_r}%" to {_c}
+			else:
+				send message "{@p} &cStai già chiamando qualcun altro." to {_c}
+		else:
+			send message "{@p} &c%{_r}% non ha un telefono nell'inventario." to {_c}
+	else:
+		send message "{@p} &cNon hai un telefono in mano." to {_c}
+
+
+function leaveCall(p: player, dropped: boolean):
+	clear {phone::user::%{_p}%::calling}
+	if {phone::user::%{_p}%::receiving} is set:
+		send message "{@p} &8%{_p}% &7ha chiuso la chiamata." to {phone::user::%{_p}%::receiving} and {_p}
+		clear {phone::user::%{phone::user::%{_p}%::receiving}%::receiving}
+		clear {phone::user::%{_p}%::receiving}
+	else:
+		if {_dropped} is false:
+			send message "{@p} &cNon sei in una chiamata." to {_p}			
+#endfold	
+
+on inventory click:
+	if isInCall(player) is true:
+		if event-item is instancePhone():
+			cancel event
+			send message "{@p} &cEsci dalla chiamata prima di muovere l'oggetto nell'inventario."
+
+on swap hand items:
+	if event-player's tool is instancePhone():
+		cancel event
+		
+on drop:
+	if isInCall(player) is true:
+		if event-item is instancePhone():
+			leaveCall(player, true)
+			
+on death:
+	if isInCall(victim) is true:
+		leaveCall(victim, true)
+
+	
+on chat:
+	if {phone::user::%player%::receiving} is set:
+		cancel event
+		send message "{@p} &7[<tooltip:&c&lCHIUDI CHIAMATA><command:/phone leave>&c&lX&7<reset>] &8%player%: &7%unformatted message%" to player and {phone::user::%player%::receiving}
+
+
+		
+
+function GPSMenu(p: player) :: inventory:
+	set {_gui} to a new chest inventory with 4 row with name "{@GPSGUI}"
+	set slot 8 of {_gui} to red stained glass pane named "&c&lINDIETRO"
+	set slot 0,1,2,3,5,6,7 of {_gui} to yellow stained glass pane named "{@GPS}"
+	set slot 4 of {_gui} to gold block named "&eClicca su una destinazione per avviare il GPS."
+	if {_p} has permission "phone.admin":
+		set slot 0 of {_gui} to lime stained glass pane named "&a&lAGGIUNGI LOCALITA'" with lore "&7Soltanto chi ha il permesso%nl%&7&nphone.admin&7 può vedere questo pulsante."
+	set {_x} to 9
+	loop {phone::gps::*}:
+		set {_block} to {phone::gps::%loop-value%::block} parsed as item
+		if {_block} is not set:
+			set {_block} to "stone" parsed as item
+		if {_p} does not have permission "phone.admin":
+			set slot {_x} of {_gui} to {_block} named "&7%uncoloured loop-value%" with lore "&7Clicca per avviare il GPS per &7&l%loop-value%"
+		else:
+			set slot {_x} of {_gui} to {_block} named "&7%uncoloured loop-value%" with lore "&7(Click tasto sinistro per avviare il GPS per &7&l%loop-value%)%nl%&c(Click tasto destro per eliminare)"			
+		add 1 to {_x}
+	return {_gui}
+
+	
+on inventory click:
+	if name of event-inventory is "&8Telefono di %player%":
+		cancel event
+		if name of event-item is "{@AddressBook}":
+			close player's inventory
+			open rubricaMenu(player) to player
+		else if name of event-item is "{@Messenger}":
+			if {phone::user::%player%::number} is set:
+				messengerPrompt(player)
+			else:
+				send message "{@p} &cNon hai un numero di telefono attivo."
+		else if index of event-slot is 22:
+			if {phone::user::%player%::preferences::pings} is true:
+				set {phone::user::%player%::preferences::pings} to false
+			else:
+				set {phone::user::%player%::preferences::pings} to true
+			close player's inventory
+			open phoneMenu(player) to player
+		else if name of event-item is "{@Phone}":
+			close player's inventory
+			open callsMenu(player) to player
+		else if name of event-item is "{@GPS}":
+			close player's inventory
+			open GPSMenu(player) to player
+		else if index of event-slot is 24:
+			set {_numb} to GetNumberFromUser(player)
+			if {_numb} is set:
+				if player's inventory does not contain instanceTicket(player, {_numb}):
+					add 1 of instanceTicket(player, {_numb}) to player's inventory
+					send message "{@p} &7Hai ricevuto un biglietto con il tuo numero di telefono."
+					close player's inventory
+				else:
+					send message "{@p} &7Hai già un biglietto con il tuo numero di telefono."
+					close player's inventory
+			else:
+				send message "{@p} &cVai da un operatore telefonico per avere un numero di telefono."
+				close player's inventory
+		else if index of event-slot is 21:
+			if player does not have permission "phone.admin":
+				close player's inventory
+				send message "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>" to player
+	else if name of event-inventory is "{@AddressBookGui}":
+		cancel event
+		if event-item is paper:
+			if click type is right mouse button:
+				rubricaRemove(player, event-item)
+			else if click type is left mouse button:
+				rubricaEdit(player, event-item)
+		else if index of event-slot is 8:
+			close player's inventory
+			open phoneMenu(player) to player
+		else if index of event-slot is 0:
+			rubricaAdd(player)
+	else if name of event-inventory is "{@MessengerGui}":
+		cancel event
+		if event-item is paper:
+			messengerSend(player, event-item)
+		else if index of event-slot is 8:
+			close player's inventory
+			open phoneMenu(player) to player
+		else if index of event-slot is 0:
+			close player's inventory
+			open rubricaMenu(player) to player
+		else if event-item is lime wool:
+			close player's inventory
+			messengerMenu(player)
+		else if event-item is light blue wool:
+			close player's inventory
+			messengerList(player)
+	else if name of event-inventory is "{@NewMessagesGui}":
+		cancel event
+		if event-item is paper:
+			if click type is right mouse button:
+				removeMessage(player, item)
+			else if click type is left mouse button:
+				messengerSend(player, event-item)
+		else if type of event-item is barrier:
+			emptyMessages(player)
+		else if index of event-slot is 8:
+			close player's inventory
+			open phoneMenu(player) to player			
+		else if index of event-slot is 0:
+			rubricaAdd(player)
+	else if name of event-inventory is "{@CallsGui}":
+		cancel event
+		if event-item is red stained glass pane:
+			close player's inventory
+			open phoneMenu(player) to player
+		else if event-item is yellow stained glass pane:
+			close player's inventory
+			open rubricaMenu(player) to player
+		else if name of event-item is "{@Police}":
+			CallPolice(player)
+		else if name of event-item is "{@Firefighters}":
+			CallFireFighers(player)
+		else if name of event-item is "{@Ambulance}":
+			CallAmbulance(player)
+		else if name of event-item is "{@Taxi}":
+			CallTaxi(player)
+		else if name of event-item is "{@Staff}":
+			CallStaff(player)
+		else if name of event-item is "{@AddressBook}":
+			close player's inventory
+			CallsList(player)
+		else if event-item is paper:
+			CallNumber(player, event-item)
+		else if name of event-item is "{@Custom}":
+			close player's inventory
+			send message "<sgt:/phone call >&7[&a&lCLICCA QUI PER DIGITARE IL NUMERO&7]<reset>" to player
+	else if name of event-inventory is "{@GPSGUI}":
+		cancel event
+		if index of event-slot is 0:
+			if player has permission "phone.admin":
+				close player's inventory
+				send message formatted "<sgt:/phone addgps <nome> <blocco_gui>>&7[&a&lAGGIUNGI LOCALITA'&7]" to player
+		else if index of event-slot is 8:
+			close player's inventory
+			open phoneMenu(player) to player
+		else if index of event-slot is not 0 or 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8:
+			if event-item is set:
+				if player does not have permission "phone.admin":
+					close player's inventory
+					set {_loc} to uncoloured event-item's name
+					make player execute "{@ComandoGPS} %{_loc}%"
+				else:
+					if click type is right mouse button:
+						close player's inventory
+						set {_loc} to uncoloured event-item's name
+						make player execute "phone removegps %{_loc}%"
+						open GPSMenu(player) to player
+					else if click type is left mouse button:
+						close player's inventory
+						set {_loc} to uncoloured event-item's name
+						make player execute "{@ComandoGPS} %{_loc}%"
+
+		
+
+		
+		

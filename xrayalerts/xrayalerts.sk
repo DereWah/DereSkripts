@@ -1,0 +1,107 @@
+#xRayAlerts 1.1 skript by DereWah -> https://www.spigotmc.org/resources/xray-alerts.102539/
+#Language: EN
+
+Options:
+	p: &7[&cxRay&eAlerts&7]
+	credits: true
+	
+Variables:
+	{xalerts::coords} = false #Toggle this to receive in chat coordinates of the position where players broke ores. If enabled it's a little bit more invasive in chat.
+	
+
+command /xrayalerts [<text>]:
+	permission: derewah.xrayalerts
+	trigger:
+		if arg is "diamond":
+			if {xalerts::diamond::*} contains player:
+				remove player from {xalerts::diamond::*}
+				send message "{@p} &aDiamond Ore Alerts &cdisabled"
+			else:
+				add player to {xalerts::diamond::*}
+				send message "{@p} &aDiamond Ore Alerts &2enabled"
+		else if arg is "netherite":
+			if {xalerts::netherite::*} contains player:
+				remove player from {xalerts::netherite::*}
+				send message "{@p} &aNetherite Ore Alerts &cdisabled"
+			else:
+				add player to {xalerts::netherite::*}
+				send message "{@p} &aNetherite Ore Alerts &2enabled"
+		else if arg is "tp":
+			if {xalerts::breaks::position} is set:
+				teleport player to {xalerts::breaks::position}
+			else:
+				send message "{@p} &cNo avaiable position."
+		else if arg is "debug":
+			clear {xalerts::*}
+			send message "{@p} &aThe plugin has been reset."
+		else:
+			send message "{@p} &cCorrect usage: /xrayalerts <diamond|netherite|tp|debug>"
+
+
+
+on break of diamond ore:
+	if {xalerts::breaks::diamond::*} does not contain player:
+		add player to {xalerts::breaks::diamond::*}
+		set {xalerts::breaks::diamond::%player%} to 1
+		if {xalerts::coords} is true:
+			set {_pos} to player's location
+		else:
+			set {_pos} to "&c&lTP"
+		set {xalerts::breaks::position} to player's location
+		send message "{@p} &3&l%player%&7 dug &3&l%{xalerts::breaks::diamond::%player%}% &3diamonds. &9[&7<command:/xrayalerts tp>%{_pos}%&9]<reset>" to {xalerts::diamond::*}
+	else:
+		add 1 to {xalerts::breaks::diamond::%player%}
+		if {xalerts::coords} is true:
+			set {_pos} to player's location
+		else:
+			set {_pos} to "&c&lTP"
+		set {xalerts::breaks::position} to player's location
+		send message "{@p} &3&l%player%&7 dug &3&l%{xalerts::breaks::diamond::%player%}% &3diamonds. &9[&7<command:/xrayalerts tp>%{_pos}%&9]<reset>" to {xalerts::diamond::*}
+		
+on break of deepslate diamond ore:
+	if {xalerts::breaks::diamond::*} does not contain player:
+		add player to {xalerts::breaks::diamond::*}
+		set {xalerts::breaks::diamond::%player%} to 1
+		if {xalerts::coords} is true:
+			set {_pos} to player's location
+		else:
+			set {_pos} to "&c&lTP"
+		set {xalerts::breaks::position} to player's location
+		send message "{@p} &3&l%player%&7 dug &3&l%{xalerts::breaks::diamond::%player%}% &3diamonds. &9[&7<command:/xrayalerts tp>%{_pos}%&9]<reset>" to {xalerts::diamond::*}
+	else:
+		add 1 to {xalerts::breaks::diamond::%player%}
+		if {xalerts::coords} is true:
+			set {_pos} to player's location
+		else:
+			set {_pos} to "&c&lTP"
+		set {xalerts::breaks::position} to player's location
+		send message "{@p} &3&l%player%&7 dug &3&l%{xalerts::breaks::diamond::%player%}% &3diamonds. &9[&7<command:/xrayalerts tp>%{_pos}%&9]<reset>" to {xalerts::diamond::*}		
+
+on break of ancient debris:
+	if {xalerts::breaks::netherite::*} does not contain player:
+		add player to {xalerts::breaks::netherite::*}
+		set {xalerts::breaks::netherite::%player%} to 1
+		if {xalerts::coords} is true:
+			set {_pos} to player's location
+		else:
+			set {_pos} to "&c&lTP"
+		set {xalerts::breaks::position} to player's location
+		send message "{@p} &d&l%player%&7 dug &d&l%{xalerts::breaks::netherite::%player%}% &dnetherite. &9[&7<command:/xrayalerts tp>%{_pos}%&9]<reset>" to {xalerts::netherite::*}
+	else:
+		add 1 to {xalerts::breaks::netherite::%player%}
+		if {xalerts::coords} is true:
+			set {_pos} to player's location
+		else:
+			set {_pos} to "&c&lTP"
+		set {xalerts::breaks::position} to player's location
+		send message "{@p} &d&l%player%&7 dug &d&l%{xalerts::breaks::netherite::%player%}% &dnetherite. &9[&7<command:/xrayalerts tp>%{_pos}%&9]<reset>" to {xalerts::netherite::*}
+
+
+
+every hour:
+	clear {xalerts::breaks::*}
+	
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://www.spigotmc.org/members/derewah.240784/>DereWah &b[&9&nLINK&b]<reset>"

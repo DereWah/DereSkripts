@@ -1,0 +1,82 @@
+#DereBank 1.4 skript by DereWah -> https://www.spigotmc.org/resources/anti-robbery-signs-call-police-when-being-robbed.103078/
+#Language: IT Italian version: https://t.me/skriptitaly
+
+
+#COMMANDS:
+#/antirobbery | derewah.antirobbery | Ottieni un bastone per installare un cartello anti-rapina
+
+#PERMESSI:
+#Usa i cartelli anti-rapina: derewah.antirobberyuse
+#Ricevi gli alerts dei messaggi antirapina: derewah.antirobberyalerts
+
+#CREA UN CARTELLO:
+#Piazza un cartello e scrivi nella prima linea di esso il nome del negozio a cui appartiene. Un'esempio è "McDonalds".
+#Successivamente clicca su tale cartello usando il bastone anti-rapina. Si creerà un cartello anti-rapina.
+
+Options:
+	p: &7[&cAnti&1Robbery&7] #Prefisso messaggi
+	lore: &7Clicca con il tasto destro su un cartello per installare il sistema anti-rapina. #Descrizione del cartello anti-rapin
+	header: &7---&c&lALLERTA RAPINA&7--- #Intestazione dell'alert
+	footer: &7--------------------- #Chiusura dell'alert
+	click: &c&lCLICCA #Messaggio del bottone
+	called: &1&lCHIAMATA... #Bottone del messaggio quando in chiamata
+	cooldown: 10 seconds #Cooldown tra utilizzi del cartello.
+	credits: true #Invia i crediti per il dev in chat?
+
+command /antirobbery:
+	permission: derewah.antirobbery
+	trigger:
+		add 1 of instanceAntiRobberyStick() to player's inventory
+		give 1 sign to player's inventory
+		send message "{@p} &7Hai ricevuto un bastone {@p}."
+		
+		
+on rightclick on sign:
+	if player's tool is instanceAntiRobberyStick():
+		if 1st line of event-block is not "":
+			set {_place} to 1st line of event-block
+			set 2nd line of event-block to "&1%{_place}%"
+			set 1st line of event-block to "{@p}"
+			set 3rd line of event-block to "{@click}"
+			set 4th line of event-block to "&7per chiamare fdo"
+		else:
+			send message "{@p} &7La 1a riga del cartello NON deve essere vuota.."
+			send message "{@p} &7Scrivi nella 1a riga del cartello il nome del negozio a cui esso appartiene."
+	else:
+		if 1st line of event-block is "{@p}":
+			if player has permission "derewah.antirobberyuse":
+				if 3rd line of event-block is "{@click}":
+					send message "{@p} &7La polizia è stata chiamata."				
+					set 3rd line of event-block to "{@called}"
+					soundClickRobbery(location of event-block)
+					loop all players:
+						if loop-player has permission "derewah.antirobberyalerts":
+							soundAlertRobbery(loop-player)
+							send message "{@header}" to loop-player
+							send message "&7Posto: &c%uncoloured 2nd line of event-block%" to loop-player
+							send message "&7Richiesto da: &c%event-player%" to loop-player
+							send message "{@footer}" to loop-player
+					wait {@cooldown}
+					set 3rd line of event-block to "{@click}"
+				else:
+					send message "{@p} &7La polizia è già stata chiamata."
+
+		
+function instanceAntiRobberyStick() :: item:
+	set {_item} to stick
+	set {_item}'s name to "{@p}"
+	set 1st line of {_item}'s lore to "{@lore}"
+	return {_item}
+	
+	
+function soundClickRobbery(l: location):
+	play sound "minecraft:block.tripwire.click_on" at volume 1 at pitch 1 at {_l}
+	
+function soundAlertRobbery(p: player):
+	play sound "minecraft:block.anvil.place" at volume 1 at pitch 1 to {_p}
+	
+
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"

@@ -1,0 +1,132 @@
+#Skript: Passaporto.sk by DereWah-> https://t.me/skriptitaly
+#Versione: 1.2
+#SHOP: https://dereskripts.tebex.io/
+
+#DIPENDENZE:
+#Skript 2.6.2
+#SkBee (Se usate una versione minecraft sotto la 1.17 scaricate SkBee 1.10.2:
+#https://www.spigotmc.org/resources/skbee-skript-addon.75839/download?version=380506
+
+#COMANDI
+#/passaporto | passaporto.use | accesso al comando principale
+#/passaporto crea <player> <città> | passaporto.create | crea un passaporto per un giocatore.
+#/passaporto blocca <player> | passaporto.remove | blocca un passaporto
+#/passaporto controlla <player> | passaporto.check | controlla un passaporto
+#/passaporto debug | passaporto.debug | resetta le variabili dello skript, elimina tutti i passaporti.
+
+
+Options:
+	expire: 14 days
+	p: &7[&c&lPass&8&lport&7]
+
+	
+command /passaporto [<text>] [<player>] [<text>]:
+	permission: passaporto.use
+	trigger:
+		if arg-1 is "create" or "crea" or "dai" or "give":
+			if player has permission "passaporto.create":
+				if arg-2 is set:
+					if {passaporto::player::%arg-2%} is not set:
+						if arg-3 is set:
+							add 1 of instancePassaporto(player, arg-2, arg-3) to player's inventory
+							send message "{@p} &7Hai creato il passaporto di &c%arg-2%&7."
+						else:
+							send message "{@p} &cSpecifica la città di provenienza del cittadino."
+					else:
+						send message formatted "{@p} &cQuesto giocatore ha già un passaporto. <cmd:/passaporto remove %arg-2%>&7[&c&lBLOCCA&7]<reset>"
+				else:
+					send message "{@p} &cSpecifica il giocatore per cui creare il passaporto."
+			else:
+				send message "{@p} &cNon hai il permesso &4passaporto.create&c."
+		else if arg-1 is "blocca" or "block" or "delete" or "remove":
+			if player has permission "passaporto.remove":
+				if arg-2 is set:
+					if {passaporto::player::%arg-2%} is set:
+						removePassaporto({passaporto::player::%arg-2%})
+						send message "{@p} &7Hai bloccato il passaporto di &c%arg-2%&7."
+					else:
+						send message "{@p} &cQuesto giocatore non ha un passaporto."
+				else:
+					send message "{@p} &cSpecifica il giocatore di cui eliminare il passaporto."
+			else:
+				send message "{@p} &cNon hai il permesso &4passaporto.remove&c."
+		else if arg-1 is "update" or "check" or "verify" or "verifica" or "controlla":
+			if player has permission "passaporto.check":
+				if arg-2 is set:
+					if {passaporto::player::%arg-2%} is set:
+						send message formatted checkPassaporto({passaporto::player::%arg-2%}) to player
+					else:
+						send message "{@p} &cQuesto giocatore non ha un passaporto."
+				else:
+					send message "{@p} &cSpecifica il giocatore di cui controllare il passaporto."
+			else:
+				send message "{@p} &cNon hai il permesso &4passaporto.check&c."
+		else if arg-1 is "debug":
+			if player has permission "passaporto.debug":
+				send message "{@p} &7Resettando le variabili..."
+				set {_x} to 0
+				loop {passaporto::total} times:
+					add 1 to {_x}
+					removePassaporto({_x})
+				send message "{@p} &7Resettati &b%{passaporto::total}%&7 passaporti."
+				clear {passaporto::player::*}
+				set {passaporto::total} to 0
+			else:
+				send message "{@p} &cNOn hai il permesso &4passaporto.debug&c."
+		else:
+			loop 20 times:
+				send message ""
+			send message "&7---{@p}&7---"
+			send message "&7&oSkript by: &6DereWah"
+			send message "&7<url:https://t.me/skriptitaly>[&b&lTG&7]<reset> &7<url:https://www.spigotmc.org/members/derewah.240784/>[&e&lSPIGOT&7]<reset> <url:https://dereskripts.tebex.io/>&7[&2&lWEBSITE&7]<reset>"
+			send message "&7------%nl%"
+			send message "{@p} &c/passaporto <crea|blocca|controlla|debug>"
+						
+function checkPassaporto(id: integer) :: text:
+	if {passaporto::id::%{_id}%::scadenza} > now:
+		return "{@p} &7Questo passaporto è &a&lVALIDO&7. <cmd:/passaporto remove %{passaporto::id::%{_id}%::cittadino}%>&7[&c&lBLOCCA&7]<reset>"
+	else:
+		return "{@p} &7Questo passaporto è &c&lSCADUTO&7. <cmd:/passaporto remove %{passaporto::id::%{_id}%::cittadino}%>&7[&c&lBLOCCA&7]<reset>"
+						
+function removePassaporto(id: integer):
+	clear {passaporto::player::%{passaporto::id::%{_id}%::cittadino}%}
+	clear {passaporto::id::%{_id}%::cittadino}
+	clear {passaporto::id::%{_id}%::autore}
+	clear {passaporto::id::%{_id}%::issuer}
+	clear {passaporto::id::%{_id}%::scadenza}	
+
+function instancePassaporto(a: player, v: player, i: string) :: item:
+	set {_b} to a written book
+	add 1 to {passaporto::total}
+	set {_id} to {passaporto::total}
+	set {passaporto::id::%{_id}%::cittadino} to {_v}
+	set {passaporto::id::%{_id}%::autore} to {_a}
+	set {passaporto::id::%{_id}%::issuer} to {_i}
+	set {passaporto::id::%{_id}%::scadenza} to {@expire} after now
+	set {passaporto::player::%{_v}%} to {_id}
+	set {_t} to "      {@p}%nl%"
+	set {_t} to "%{_t}%&8&l----------------%nl%%nl%"
+	set {_t} to "%{_t}%    &7[&4&lVERIFICA&7]%nl%%nl%"
+	set {_t} to "%{_t}%&8ID: &c##%{_id}%%nl%"
+	set {_t} to "%{_t}%&8Cittadino: &c%{_v}%%nl%"
+	set {_t} to "%{_t}%&8Rilasciato da: &c%{_a}%%nl%"
+	set {_t} to "%{_t}%&8Città: &c%{_i}%%nl%"	
+	set {_now} to now formatted as "dd/MM/yyyy"
+	set {_t} to "%{_t}%&8Data: &c%{_now}%%nl%%nl%"
+	set {_now} to now
+	add {@expire} to {_now}
+	set {_now} to {_now} formatted as "dd/MM/yyyy"
+	set {_t} to text component of "%{_t}%&7&oScadenza: %{_now}%"
+
+	set hover event of {_t} to hover event showing "&7Clicca per verificare la%nl%&7validità del passaporto."
+	set click event of {_t} to click event to run command "/passaporto verifica %{_v}%"
+	set page 1 of book {_b} to {_t}
+	set book author of {_b} to "%{_a}%"
+	set book title of {_b} to "&7Passaporto di &4%{_v}%"
+	set 1st line of {_b}'s lore to "&0%{_id}%"
+	return {_b}
+
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"

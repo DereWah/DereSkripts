@@ -1,0 +1,451 @@
+#DereClaim 1.0 by DereWah --> https://t.me/skriptitaly
+#SHOP: https://dereskripts.tebex.io/
+#LINGUA: IT
+
+#ATTENZIONE!--------------------------------
+#Apportate modifiche allo skript SOLTANTO tramite le Options qui sotto.
+#Se modificate il codice e lo skript smette di funzionare NON posso farci nulla.
+#Se invece trovate bug nello skript a livello di funzionamento, per favore REPORTATELI
+#scrivendomi in privato su telegram: https://t.me/skriptitaly
+
+#ASSICURATEVI DI STAR USANDO TUTTI I PLUGIN REQUISITI PRIMA DI REPORTARE UN BUG.
+#-------------------------------------------
+
+#REQUISITI---------------------------------
+#Skript 2.6.2 https://skunity.com/downloads
+#WorldEdit & WorldGuard (sennò darà errori)
+#Vault
+#------------------------------------------
+
+#PERMESSI----------------------------------
+#dereclaim.use - Dovrebbero averlo tutti i giocatori, serve ad accedere al comando base /dereclaim
+#dereclaim.admin - Permessi admin. Dallo solo a persone fidate. Può fare qualunque cosa con i claims.
+
+#COMANDI-----------------------------------
+#/dereclaim - Apre la GUI. Se sei admin puoi scegliere se aprire la GUI normale.
+#/dereclaim debug - Resetta lo skript, elimina tutti i claims creati dallo skript. Farlo solo quando si è sicuri.
+
+
+Options:
+	p: &8[&2Dere&aClaim&8] #Prefix dello skript.
+	prefix_admingui: &4&lADMIN GUI #Nome GUI admin.
+	prefix_managegui: &1&lMANAGE GUI #Nome GUI modifica claim.
+	mondo: world #Nome del mondo in cui sono i chunks.
+	
+
+function claimDebug(p: player):
+	send message "{@p} &7Rimozione di &a%size of {dereclaim::perms::*}%&7 permessi..." to {_p}
+	loop {dereclaim::perms::*}:
+		clear {dereclaim::perms::%loop-value%::max}
+	clear {dereclaim::perms::*}
+	send message "{@p} &7Rimozione dati giocatori..." to {_p}
+	loop {dereclaim::users::*}:
+		clear {dereclaim::users::%loop-value%::amount}
+	clear {dereclaim::users::*}
+	send message "{@p} &7Rimozione dati claims..." to {_p}
+	loop {dereclaim::claimed::*}:
+		clear {dereclaim::claimed::%loop-value%::members::*}
+		clear {dereclaim::claimed::%loop-value%::owner}
+		make console execute "/rg delete -w ""{@mondo}"" dereplot%loop-value%"
+	set {_x} to 0
+	loop {dereclaim::max} times:
+		add 1 to {_x}
+		make console execute "/rg delete -w ""{@mondo}"" dereplot%{_x}%"		
+	clear {dereclaim::claimed::*}
+	set {dereclaim::max} to 0
+	send message "{@p} &aReset completato." to {_p}
+
+command /dereclaim [<text>] [<offlineplayer>] [<text>] [<integer>]:
+	aliases: /chunkclaim, /chunk, /claimchunk, /terreno, /dereclaim
+	permission: dereclaim.use
+	permission message: &cNon hai il permesso &4dereclaim.use&c.
+	trigger:
+		if arg-1 is "remove" or "removeplayer" or "removemember" or "rimuovi" or "untrust":
+			if arg-2 is set:
+				set {_id} to getCurrentChunkId(player)
+				if {_id} >= 0:
+					removeMember(player, {_id}, arg-2)
+				else:
+					send message "{@p} &7Non sei in un chunk valido."
+			else:
+				send message "{@p} &7Specifica il giocatore."
+					
+		else if arg-1 is "debug" or "reset":
+			if player has permission "dereclaim.admin":
+				claimDebug(player)
+		else if arg-1 is "add" or "addplayer" or "addmember" or "trust" or "aggiungi":
+			if arg-2 is set:
+				set {_id} to getCurrentChunkId(player)
+				if {_id} >= 0:
+					addMember(player, {_id}, arg-2)
+				else:
+					send message "{@p} &7Non sei in un chunk valido."
+			else:
+				send message "{@p} &7Specifica il giocatore."
+		else if arg-1 is "addperm" or "aggiungipermesso":
+			if player has permission "dereclaim.admin":
+				if arg-3 is set:
+					if arg-4 is set:
+						if {dereclaim::perms::*} does not contain arg-3 in lowercase:
+							add arg-3 in lowercase to {dereclaim::perms::*}
+							set {dereclaim::perms::%arg-3%::max} to arg-4
+							send message "{@p} &7I giocatori con il permesso &a&n%arg-3%&7 potranno claimare &a&n%arg-4%&7 chunks."
+						else:
+							send message formatted "{@p} &7Esiste già un limite per questo permesso. <cmd:/dereclaim removeperm %arg-3%>&7[&c&lCLICCA PER ELIMINARE&7]<reset>"
+					else:
+						send message "{@p} &7Specifica il numero massimo di claim!"
+				else:
+					send message "{@p} &7Specifica il permesso da aggiungere! Es: &a&nrank.diamante&7."
+			else:
+				send message "{@p} &cNon hai il permesso &4dereclaim.admin&c."
+		else if arg-1 is "removeperm" or "rimuovipermesso":
+			if player has permission "dereclaim.admin":
+				if arg-3 is set:
+					set {_arg} to arg-3 in lowercase
+					if {dereclaim::perms::*} contains {_arg}:
+						remove {_arg} from {dereclaim::perms::*}
+						clear {dereclaim::perms::%{_arg}%::max}
+						send message "{@p} &7Hai rimosso il permesso &a&n%{_arg}%&7."
+					else:
+						send message formatted "{@p} &7Non esiste alcun impostazione per questo permesso."
+				else:
+					send message "{@p} &7Specifica il permesso da rimuovere! Es: &a&nrank.diamante&7."
+			else:
+				send message "{@p} &cNon hai il permesso &4dereclaim.admin&c."
+					
+				
+		else:
+			if player has permission "dereclaim.admin":
+				adminGui(player)
+			else:
+				if isInChunk(player) is false:
+					claimGui(player)
+				else:
+					if isOwner(player, getCurrentChunkId(player)):
+						manageClaimGui(player)
+					else:
+						claimGui(player)
+		
+		
+function createChunk(p: player):
+	if {_p} has permission "dereclaim.admin":
+		if {_p} has permission "worldguard.region.define":
+			if {_p}'s world is "{@mondo}":
+				set {_x} to x-coordinates of {derecelaim::selecting::%{_p}%::1}
+				set {_y} to y-coordinates of {derecelaim::selecting::%{_p}%::1}
+				set {_z} to z-coordinates of {derecelaim::selecting::%{_p}%::1}
+				make {_p} execute "//pos1 %{_x}%,%{_y}%,%{_z}%"
+				set {_x} to x-coordinates of {derecelaim::selecting::%{_p}%::2}
+				set {_y} to y-coordinates of {derecelaim::selecting::%{_p}%::2}
+				set {_z} to z-coordinates of {derecelaim::selecting::%{_p}%::2}
+				make {_p} execute "//pos2 %{_x}%,%{_y}%,%{_z}%"
+				send message "{@p} &7&oCreazione del chunk in corso. Non ti muovere per 5 secondi..." to {_p}
+				wait 3 seconds
+				add 1 to {dereclaim::max}
+				set {_id} to {dereclaim::max}
+				make {_p} execute "/rg define -w ""{@mondo}"" dereplot%{_id}%"
+				wait 1 second
+				make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% greeting-title &2Chunk Libero"
+				make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% greeting {@p} &7Questo chunk è libero."
+				make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% deny-message {@p} Non puoi costruire in questo chunk."			
+				send message "{@p} &7Hai creato il chunk &a&l%{_id}%&7 con successo!" to {_p}
+				send message "{@p} &7I giocatori potranno claimarlo con &a&n/dereclaim&7." to {_p}
+				send message "{@p} &4&l&nATTENZIONE: &cPer eliminare un chunk usa il pulsante nella GUI." to {_p}
+				send message "{@p} &cUsando worldguard normalmente BUGGERAI lo skript." to {_p}
+			else:
+				send message "{@p} &cNon sei nel mondo &4&o{@mondo}&c. Imposta il mondo corretto dalle impostazioni dell'sk!" to {_p}
+		else:
+			send message "{@p} &cDevi avere i permessi di world guard per creare i chunk! &4worldguard.region.define&c." to {_p}
+	else:
+		send message "{@p} &cNon hai il permesso &4dereclaim.admin&c." to {_p}
+	clear {derecelaim::selecting::%{_p}%::1}
+	clear {derecelaim::selecting::%{_p}%::2}
+	clear {derecelaim::selecting::%{_p}%::status}
+		
+function deleteChunk(p: player):
+	if {_p} has permission "dereclaim.admin":
+		if isInChunk({_p}):
+			set {_id} to getCurrentChunkId({_p})
+			set {_owner} to {dereclaim::claimed::%{_id}%::owner}
+			send message "{@p} &cUn tuo chunk è stato eliminato da un admin." to {_owner}
+			remove 1 from {dereclaim::users::%{_owner}%::amount}
+			clear {dereclaim::claimed::%{_id}%::members::*}
+			clear {dereclaim::claimed::%{_id}%::owner}
+			remove {_id} from {dereclaim::claimed::*}
+			clear {dereclaim::claimed::%{_id}%}
+			make console execute "/rg delete -w ""{@mondo}"" dereplot%{_id}%"
+			send message "{@p} &7Hai eliminato il chunk &a&l%{_id}%&7. I giocatori non potranno più claimarlo." to {_p}
+		else:
+			send message "{@p} &7Non sei in un chunk al momento." to {_p}
+	else:
+		send message "{@p} &cNon hai il permesso &4dereclaim.admin&c." to {_p}
+		
+	
+function manageClaimGui(p: player):
+	set {_gui} to a new chest inventory with 3 row with name "{@prefix_managegui}"
+	set {_id} to getCurrentChunkId({_p})
+	set slot 0,1,2,3,4,8,18,26,22,5,6,7,9,17,19,20,24,25,21,4,23 of {_gui} to blue stained glass pane named "{@p}"
+	set slot 4 of {_gui} to barrier named "&c&lRIMUOVI TUTTI I GIOCAORI" with lore "&7Elimina la lista dei giocatori trustati."
+	set slot 12 of {_gui} to gold block named "&a&lAGGIUNGI PLAYER" with lore "&7Dai i permessi ad un giocatore di modificare il tuo chunk."
+	set slot 14 of {_gui} to redstone block named "&c&lRIMUOVI PLAYER" with lore "&7Rimuovi i permessi ad un giocatore."
+	set slot 22 of {_gui} to grass block named "&a&lABBANDONA CHUNK" with lore "&7Abbandona questo chunk.%nl%&4&lTUTTI GLI OGGETTI ALL'INTERNO verranno abbandonati%nl%&7e non potrai riprenderli!"
+	open {_gui} to {_p}
+
+function adminGui(p: player):
+	set {_gui} to a new chest inventory with 3 row with name "{@prefix_admingui}"
+	set slot 0,1,2,3,4,8,18,26,22,5,6,7,9,17,19,20,24,25,21,4,23 of {_gui} to red stained glass pane named "{@p}"	
+	set slot 12 of {_gui} to command block named "&a&lCREA UN CLAIM" with lore "&7Crea una regione claimabile dai giocatori."
+	set slot 14 of {_gui} to barrier named "&c&lELIMINA UN CLAIM" with lore "&7Elimina il claim in cui sei al momento."
+	set slot 4 of {_gui} to grass block named "&a&lPLAYER GUI" with lore "&7Clicca per passare alla GUI dei giocatori normali."
+	set slot 22 of {_gui} to emerald named "&2&lIMPOSTA I PERMESSI" with lore "&7Personalizza il limite di chunks per ranks diversi."
+	open {_gui} to {_p}
+		
+function claimGui(p: player):
+	set {_gui} to a new chest inventory with 3 row with name "{@p}"
+	set slot 0,1,2,3,4,8,18,26,22,5,6,7,9,17,19,20,24,25,21,4,23 of {_gui} to lime stained glass pane named "{@p}"
+	set slot 0 of {_gui} to skull of ("MHF_Question" parsed as offline player) named "&c&lCOSA E' UN CLAIM?" with lore "&7Un &aclaim&7 ti permette di ottenere accesso%nl%&7ad una parte del mondo. Puoi &acostruire&7, &cdistruggere&7,%nl%&7e in generale creare una &abase sicura&7 per i tuoi oggetti."
+	set slot 12 of {_gui} to lime wool named "&a&lCLAIMA" with lore "&7Claima il lotto in cui sei al momento!"
+	set slot 14 of {_gui} to skull of ("MHF_Grass" parsed as offline player) named "&e&lCLAIM DISPONIBILI" with lore "&7Claims: &e%getLimit({_p})%%nl%%nl%&7Supporta il server con dei rank per aumentare il numero di claims!"
+	set slot 8 of {_gui} to skull of ("MHF_Question" parsed as offline player) named "&c&lCOSA E' UN CLAIM?" with lore "&7Se non riesci a leggere la descrizione dei claim%nl%&7clicca per vederla in chat."
+	open {_gui} to {_p}
+	
+function isInChunk(p: player) :: boolean:
+	set {_r::*} to regions at location of {_p}
+	loop {_r::*}:
+		if "%loop-value%" contains "dereplot":
+			return true
+	return false
+
+function getCurrentChunkId(p: player) :: integer:
+	set {_r::*} to regions at location of {_p}
+	loop {_r::*}:
+		if "%loop-value%" contains "dereplot":
+			set {_name::*} to "%loop-value%" split at "dereplot"
+			set {_id::*} to {_name::2} split at " "
+			return {_id::1} parsed as integer
+	return -1
+
+function getLimit(p: player) :: integer:
+	set {_max} to 0
+	loop {dereclaim::perms::*}:
+		if {_p} has permission "%loop-value%":
+			if {dereclaim::perms::%loop-value%::max} >= {_max}:
+				set {_max} to {dereclaim::perms::%loop-value%::max}
+	return {_max}
+	
+function claimChunk(p: player):
+	if isInChunk({_p}) is true:
+		set {_id} to getCurrentChunkId({_p})
+		if {_id} >= 0:
+			if {dereclaim::claimed::*} does not contain {_id}:
+				if {dereclaim::users::*} does not contain {_p}:
+					add {_p} to {dereclaim::users::*}
+					set {dereclaim::users::%{_p}%::amount} to 0
+				if {dereclaim::users::%{_p}%::amount} < getLimit({_p}):
+					add {_id} to {dereclaim::claimed::*}
+					set {dereclaim::claimed::%{_id}%::owner} to {_p}
+					make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% greeting-title &2%{_p}%"
+					make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% greeting {@p} &7Stai entrando nel claim di &a%{_p}%&7."
+					make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% deny-message {@p} Non puoi costruire nel chunk di %{_p}%."
+					addMember({_p}, {_id}, {_p})
+					send message "{@p} &7Hai claimato il chunk con successo. Gestiscilo con &a/dereclaim&7." to {_p}
+					add 1 to {dereclaim::users::%{_p}%::amount}
+				else:
+					send message "{@p} &7Hai raggiunto il massimo di chunks claimabili. Supporta il server con un rank per aumentarlo." to {_p}
+			else:
+				send message "{@p} &7Questo chunk è già stato claimato. Scegline un altro." to {_p}
+		else:
+			send message "{@p} &7Non sei in nessun chunk al momento. Entra in uno per claimarlo." to {_p}
+	else:
+		send message "{@p} &7Non sei in nessun chunk al momento. Entra in uno per claimarlo." to {_p}
+		
+function isOwner(p: player, id: integer) :: boolean:
+	if {dereclaim::claimed::%{_id}%::owner} is set:
+		if {dereclaim::claimed::%{_id}%::owner} is {_p}:
+			return true
+		else if {_p} has permission "dereclaim.override":
+			return true
+		else:
+			return false
+	else:
+		return false
+		
+function addMember(p: player, id: integer, t: offlineplayer):
+	if isOwner({_p}, {_id}):
+		make console execute "/rg addmember -w ""{@mondo}"" dereplot%{_id}% %{_t}%"
+		if {_p} is not {_t}:
+			if {dereclaim::claimed::%{_id}%::members::*} does not contain {_t}:
+				add {_t} to {dereclaim::claimed::%{_id}%::members::*}
+				send message "{@p} &7Il giocatore è stato aggiunto al chunk con successo." to {_p}
+			else:
+				send message "{@p} &7Questo giocatore è già membro del claim." to {_p}
+	else:
+		send message "{@p} &7Solo il proprietario del chunk può aggiungere membri." to {_p}
+		
+function removeMember(p: player, id: integer, t: offlineplayer):
+	if isOwner({_p}, {_id}):
+		if {_p} is not {_t}:
+			if {dereclaim::claimed::%{_id}%::members::*} contains {_t}:
+				make console execute "/rg removemember -w ""{@mondo}"" dereplot%{_id}% %{_t}%"
+				remove {_t} from {dereclaim::claimed::%{_id}%::members::*}
+				send message "{@p} &7Il giocatore è stato rimosso al chunk con successo." to {_p}
+			else:
+				send message "{@p} &cIl giocatore non è membro di questo chunk." to {_p}
+		else:
+			send message "{@p} &7Non puoi rimuovere te stesso." to {_p}
+	else:
+		send message "{@p} &7Solo il proprietario del chunk può rimuovere membri." to {_p}
+		
+function clearMembers(p: player, id: integer):
+	if isOwner({_p}, {_id}) is true:
+		send message "{@p} &7Rimozione di &a%size of {dereclaim::claimed::%{_id}%::members::*}%&7 in corso..." to {_p}
+		loop {dereclaim::claimed::%{_id}%::members::*}:
+			remove loop-value from {dereclaim::claimed::%{_id}%::members::*}
+			make console execute "/rg removemember -w ""{@mondo}"" dereplot%{_id}% %loop-value%"			
+		clear {dereclaim::claimed::%{_id}%::members::*}
+		send message "{@p} &7Completato." to {_p}
+	else:
+		send message "{@p} &cNon sei il proprietario di questo chunk." to {_p}
+		
+function unclaimChunk(p: player):
+	if isInChunk({_p}) is true:
+		set {_id} to getCurrentChunkId({_p})
+		if {_id} >= 0:
+			if {dereclaim::claimed::*} contains {_id}:
+				if isOwner({_p}, {_id}):
+					send message "before: %{dereclaim::claimed::*}%" to {_p}
+					make console execute "/rg removemember -w ""{@mondo}"" -a dereplot%{_id}%"
+					remove 1 from {dereclaim::users::%{dereclaim::claimed::%{_id}%::owner}%::amount}
+					clear {dereclaim::claimed::%{_id}%::owner}
+					clear {dereclaim::claimed::%{_id}%::members::*}
+					clear {dereclaim::claimed::%{_id}%}
+					remove {_id} from {dereclaim::claimed::*}
+
+						
+					send message "after: %{dereclaim::claimed::*}%" to {_p}
+					send message "%{_id}%" to {_p}
+					make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% greeting-title &2Chunk Libero"
+					make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% greeting {@p} &7Questo chunk è libero."
+					make console execute "/rg flag -w ""{@mondo}"" dereplot%{_id}% deny-message {@p} Non puoi costruire in questo chunk."
+					send message "{@p} &7Hai lasciato questo claim." to {_p}
+				else:
+					send message "{@p} &cNon sei il proprietario di questo chunk." to {_p}
+			else:
+				send message "{@p} &7Questo chunk non è stato claimato." to {_p}
+		else:
+			send message "{@p} &7Non sei in un chunk al momento." to {_p}
+	else:
+		send message "{@p} &7Non sei in un chunk al momento." to {_p}
+		
+function sendPlayersList(p: player):
+	if isInChunk({_p}) is true:
+		set {_id} to getCurrentChunkId({_p})
+		if {_id} >= 0:
+			if isOwner({_p}, {_id}):
+				send message "&7---&a&lLISTA GIOCATORI AGGIUNTI&7---" to {_p}
+				loop {dereclaim::claimed::%{_id}%::members::*}:
+					send message formatted "<cmd:/dereclaim remove %loop-value%><tooltip:&c&lRIMUOVI>&7[&c&lX&7]<reset> &7%loop-value%" to {_p}
+				send message "&7---&a&lTOTALE: %size of {dereclaim::claimed::%{_id}%::members::*}%&7---" to {_p}
+			else:
+				send message "{@p} &7Non sei il proprietario di questo chunk." to {_p}
+		else:
+			send message "{@p} &7Non sei in un chunk valido." to {_p}
+	else:
+		send message "{@p} &7Non sei in nessun chunk al momento." to {_p}
+		
+function sendPermsList(p: player):
+	if {_p} has permission "dereclaim.admin":
+		send message "&7---&a&lPERMESSO | MAX CLAIMS&7---" to {_p}
+		loop {dereclaim::perms::*}:
+			send message formatted "<cmd:/dereclaim removeperm %loop-value%><tooltip:&c&lRIMUOVI>&7[&c&lX&7]<reset> &a%loop-value% &7| &2MAX: &a&l%{dereclaim::perms::%loop-value%::max}%" to {_p}
+		send message formatted "<sgt:/dereclaim addperm <nuovo.permesso> <massimi claims>><tooltip:&a&lAGGIUNGI PERMESSO>&7[&a&l+&7]<reset> &anuovo.permesso" to {_p}
+		send message "&7---&a&lTOTALE: %size of {dereclaim::perms::*}%&7---" to {_p}
+		send message "&8&oSe un utente ha più permessi con limiti di claims diversi, avrà la priorità il permesso con il limite di claims più alto." to {_p}
+	else:
+		send message "{@p} &cNon hai il permesso &4dereclaim.admin&c." to {_p}
+	
+	
+function selectItem(p: player):
+	send message "{@p} &dCrea adesso il chunk! Seleziona gli estremi del claim con tasto destro e sinistro per crearlo." to {_p}
+	set {_item} to wooden hoe named "&6&lSELEZIONA CLAIM"
+	add 1 of {_item} to {_p}'s inventory
+	set {derecelaim::selecting::%{_p}%::status} to true
+	clear {derecelaim::selecting::%{_p}%::1}
+	clear {derecelaim::selecting::%{_p}%::2}
+	
+on rightclick with wooden hoe:
+	if player's tool's name is "&6&lSELEZIONA CLAIM":
+		cancel event
+		if {derecelaim::selecting::%player%::status} is true:
+			set {derecelaim::selecting::%player%::1} to location of event-block
+			send message "{@p} &aPosizione aggiunta. Premi con il tasto sinistro sull'altro angolo del claim per crearlo."
+		else:
+			remove player's tool from player's inventory
+			
+on leftclick with wooden hoe:
+	if player's tool's name is "&6&lSELEZIONA CLAIM":
+		cancel event
+		if {derecelaim::selecting::%player%::status} is true:
+			if {derecelaim::selecting::%player%::1} is set:
+				set {derecelaim::selecting::%player%::2} to location of event-block
+				remove player's tool from player's inventory
+				createChunk(player)
+			else:
+				send message "{@p} &cUsa per primo il tasto destro per creare una selezione."
+		else:
+			remove player's tool from player's inventory
+	
+on inventory click:
+	if name of event-inventory is "{@p}":
+		cancel event
+		if index of event-slot is 12:
+			claimChunk(player)
+			close player's inventory
+	else if name of event-inventory is "{@prefix_admingui}":
+		cancel event
+		if index of event-slot is 12:
+			selectItem(player)
+			close player's inventory
+		else if index of event-slot is 14:
+			close player's inventory
+			deleteChunk(player)
+		else if index of event-slot is 4:
+			close player's inventory
+			if isInChunk(player) is false:
+				claimGui(player)
+			else:
+				if isOwner(player, getCurrentChunkId(player)):
+					manageClaimGui(player)
+				else:
+					claimGui(player)
+		else if index of event-slot is 22:
+			close player's inventory
+			sendPermsList(player)
+	else if name of event-inventory is "{@prefix_managegui}":
+		cancel event
+		if index of event-slot is 22:
+			unclaimChunk(player)
+			close player's inventory
+		else if index of event-slot is 14:
+			close player's inventory
+			sendPlayersList(player)
+		else if index of event-slot is 12:
+			close player's inventory
+			send message formatted "<sgt:/dereclaim addplayer <nome>>&7[&a&lCLICCA PER AGGIUNGERE UN GIOCATORE&7]<reset>"
+		else if index of event-slot is 4:
+			close player's inventory
+			set {_id} to getCurrentChunkId(player)
+			clearMembers(player, {_id})
+			
+#Struttura:
+#{dereclaim::*}
+#	{dereclaim::claimed::*}
+#		{dereclaim::claimed::%id%::owner}
+#		{dereclaim::claimed::%id%::members::*}
+#	{dereclaim::perms::*}
+#		{dereclaim::perms::"permesso"::max}		
+#	{dereclaim::users::%player%::amount}
+#	{dereclaim::max} 
+			
+		
+			

@@ -1,0 +1,35 @@
+Options:
+	p: &7[&dXP&bC&7]
+	
+Variables:
+	{xpc::tax} = 0.3
+#Il numero di punti XP tolti al giocatore come tassa. E' in percentuale:
+#Con 0.3: Se un giocatore ha 100 livelli XP e li converte in bottiglie, otterrà bottiglie per un valore totale di 70 livelli.
+
+	{xpc::minimum} = 7
+#Il minimo numero di livelli minimi necessari al giocatore per convertire in XP.
+#Suggerisco di mantenere questo valore sopra a 7.
+
+
+
+command /xpconvert:
+	permission: derewah.xpconvert
+	cooldown: 10 minutes
+	cooldown message: {@p} &caspetta %remaining time% prima di usare ancora questo comando.
+	trigger:
+		if level of player >= {xpc::minimum}:
+			set {_level} to level of player
+			set level of player to 0
+			set level progress of player to 0
+			if {_level} < 16:
+				set {_xp} to {_level}*{_level}+6*{_level}
+			else if {_level} < 31:
+				set {_xp} to 2.5*{_level}*{_level}-40.5*{_level}+360
+			else:
+				set {_xp} to 4.5*{_level}*{_level}-162.5*{_level}+2220
+			set {_xp} to {_xp}*(1 - {xpc::tax})
+			set {_bottles} to floor({_xp} / 6)
+			send message "{@p} &5%{_level}%&d livelli di &5XP&d sono stati convertiti in &5%{_bottles}%&d bottiglie xp."
+			give {_bottles} of experience bottles to player
+		else:
+			send message "{@p} &chai bisogno di almeno %{xpc::minimum}% livelli per convertirli in bottiglie.."

@@ -1,0 +1,359 @@
+#DereBank 1.5 skript by DereWah -> https://www.spigotmc.org/resources/derebank-credit-card-with-pin-and-atm.102613/
+#Language: IT
+
+options:
+	p: &7[&cDere&eBank&7]&r #Prefisso dello skript.
+	cardname: &cDere&eMat #Nome della carta di credito.
+	cashdescription: &7Banconota #Descrizione della carta fisica. NON LASCIARE VUOTO.
+	give_card_on_join: true #Se impostato su true lo skript darà una carta a tutti i nuovi giocatori.
+	card: book #L'oggetto che rappresenta la carta di credito.
+	cash: paper #L'oggetto che rappresenta i soldi.
+	atm: observer #Il blocco che rappresenta un ATM.
+	pin: paper #L'oggetto su cui e' scritto il PIN.
+	atm_name: &8|&9&lATM&8| #Il nome della GUI dell'ATM.
+	credits: true #Se true manderà i crediti per lo sviluppo del plugin.
+	require_access_to_deposit: false #per depositare serve aprire la GUI con il pin o basta right clicckare l'ATM? False = Right click on ATM.
+	s1: 1 #Questi sono i valori delle banconote ritirabili dall'ATM. Cambiale come preferisci.
+	s2: 5
+	s3: 10
+	s4: 20
+	s5: 50
+	s6: 100
+	s7: 500
+	
+	
+command /derebank [<text>] [<offlineplayer>]:
+	permission: derebank.use
+	trigger:
+		if arg-1 is "give":
+			if player has permission "derebank.give":
+				if arg-2 is set:
+					send message "&7-------"
+					send message ""
+					send message "{@p} &9sta preparando la carta di &9&n%arg-2%&9..."
+					send message ""
+					send message "&7-------"
+					wait 2 seconds
+					makeCard(arg-2, player)
+				else:
+					send message "{@p} &cIndica per chi stai creando una carta."
+			else:
+				send message "{@p} &cNon hai il permesso."
+		else if arg-1 is "block":
+			if player has permission "derebank.debug":
+				if arg-2 is set:
+					blockCard(arg-2, player)
+				else:
+					send message "{@p} &cIndica per chi stai bloccando una carta."
+			else:
+				send message "{@p} &cNon hai il permesso."
+		else if arg-1 is "list":
+			if player has permission "derebank.debug":
+				send message "&7-------"
+				loop all players:
+					if {derebank::cards::%loop-player%::pin} is set:
+						send message formatted "{@p} &9%loop-player%&7: &7[<tooltip:%{derebank::cards::%loop-player%::pin}%>&c&lHOVER&7]"
+				send message "&7-------"
+		else if arg-1 is "debug":
+			if player has permission "derebank.debug":
+				clear {derebank::*}
+				send message "{@p} &aTutte le variabili sono state cancellate."
+		else if arg-1 is "use":
+			if checkForCard(player) is true:
+				useCard(player)
+		else:
+			send message "{@p} &cUso corretto: /derebank <give|block|list|use>"
+
+
+
+on first join:
+	if {@give_card_on_join} is true:
+		makeCard(player, player)
+	
+	
+on chat:
+	if {derebank::pending::*} contains player:
+		if message is not "cancel":
+			cancel event
+			if "%{derebank::cards::%player%::pin}%" is message:
+				remove player from {derebank::pending::*}
+				send message "{@p} &aPIN accettato. Accesso effettuato." to player
+				soundOpenBank(player)
+				openBank(player)
+			else:
+				send message "{@p} &cPIN errato. &7[<command:cancel>&c&lPREMI&7<reset>]&c per annullare."
+		else:
+			cancel event
+			remove player from {derebank::pending::*}
+			
+			
+on quit:
+	remove player from {derebank::pending::*}
+	
+on join:
+	remove player from {derebank::pending::*} #Giusto in caso il giocatore sia stato disconnesso.
+	
+	
+	
+	
+	
+function makeCard(p: player, m: player):
+	if {derebank::cards::%{_p}%::pin} is not set:
+		if {_m} is {_p}:
+			set {_m} to "{@p}"
+		set {_pin} to ""
+		loop 4 times:
+			set {_x} to a random integer between 0 and 9
+			set {_pin} to "%{_x}%%{_pin}%"
+		set {_now} to now
+		set {_item} to {@card}
+		set {_item}'s name to "{@cardname}"
+		set the 1st line of {_item}'s lore to "&cIntestata a:"
+		set the 2nd line of {_item}'s lore to "&e%{_p}%"		
+		set the 3rd line of {_item}'s lore to "&cCreata da: &e%{_m}%"
+		set the 4th line of {_item}'s lore to "&7%{_now}%"
+		set {derebank::cards::%{_p}%::pin} to {_pin}
+		set {derebank::cards::%{_p}%::issued} to {_now}
+		set {_paper} to {@pin}
+		set {_paper}'s name to "{@p} &ePIN"
+		set 1st line of {_paper}'s lore to "&7%{derebank::cards::%{_p}%::pin}%"
+		give {_item} to {_p}
+		give {_paper} to {_p}
+	else:
+		send message "{@p} &cQuesto giocatore possiede già una carta." to {_m}
+	
+function blockCard(p: player, m: player):
+	if {derebank::cards::%{_p}%::pin} is set:
+		send message "{@p} &aHai bloccato la carta di &6%{_p}%&a." to {_m}
+		send message "{@p} &aLa tua carta e' stata bloccata. Contatta la tua banca per ottenerne un'altra." to {_p}
+		clear {derebank::cards::%{_p}%::*}
+	else:
+		send message "{@p} &cQuesto giocatore non possiede una carta." to {_m}
+	
+	
+function useCard(p: player):
+	if {derebank::pending::*} does not contain {_p}:
+		add {_p} to {derebank::pending::*}
+		send message "{@p} &aScrivi in chat il PIN." to {_p}
+		send message "{@p} &7[<command:annulla>&c&lPREMI&7<reset>]&a per annullare" to {_p}
+	else:
+		send message "{@p} &7[<command:annulla>&c&lPREMI&7<reset>]&a per annullare" to {_p}
+	
+	
+function checkForCard(p: player) :: boolean:
+	set {_item} to {@card}
+	set {_item}'s name to "{@cardname}"
+	if {_p}'s tool is {_item}:
+		if the 4th line of {_p}'s tool's lore is "&7%{derebank::cards::%{_p}%::issued}%":
+			if 2nd line of {_p}'s tool's lore is "&e%{_p}%":
+				return true
+			else:
+				send message "{@p} &cQuesta non e' la tua carta." to {_p}
+				return false
+		else:
+			send message "{@p} &cQuesta carta e' bloccata. Richiedine una nuova." to {_p}
+			return false
+	else:
+		send message "{@p} &cNon hai in mano una carta." to {_p}		
+		return false
+		
+function openBank(p: player):
+	set {_atm} to a new chest inventory with 3 row with name "{@atm_name}"
+	wait 1 tick
+	set slot 0 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 1 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 2 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 3 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 4 of {_atm} to barrier named "&c&lCHIUDI"
+	set slot 5 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 6 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 7 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 8 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 9 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 10 of {_atm} to {@cash} named "&7Ritira &a{@s1}$"
+	set slot 11 of {_atm} to {@cash} named "&7Ritira &a{@s2}$"
+	set slot 12 of {_atm} to {@cash} named "&7Ritira &a{@s3}$"
+	set slot 13 of {_atm} to {@cash} named "&7Ritira &a{@s4}$"
+	set slot 14 of {_atm} to {@cash} named "&7Ritira &a{@s5}$"
+	set slot 15 of {_atm} to {@cash} named "&7Ritira &a{@s6}$"
+	set slot 16 of {_atm} to {@cash} named "&7Ritira &a{@s7}$"
+	set slot 17 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 18 of {_atm} to block of gold named "&6&lBilancio" with lore "&e%{_p}'s balance%"
+	set slot 19 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 20 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 21 of {_atm} to lime stained glass pane named "&a&lDEPOSITA" with lore "&a--->" and "&7Sposta e premi le banconote qui per depositarle."
+	set slot 23 of {_atm} to lime stained glass pane named "&a&lDEPOSITA" with lore "&a<---" and "&7Sposta e premi le banconote qui per depositarle."
+	set slot 24 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 25 of {_atm} to yellow stained glass pane named "&9&oATM"
+	set slot 26 of {_atm} to yellow stained glass pane named "&9&oATM"
+	open {_atm} to {_p}
+
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://www.spigotmc.org/resources/derebank-credit-card-with-pin-and-atm.102613/>DereWah &b[&9&nLINK&b]<reset>"
+	
+	
+function withdrawBank(p: player, bal: integer):
+	if {_p}'s balance >= {_bal}:
+		soundDepositWithdraw({_p})
+		remove {_bal} from {_p}'s balance
+		set {_item} to {@cash} named "&2%{_bal}%$"
+		set the 1st line of {_item}'s lore to "{@cashdescription}"
+		give {_item} to {_p}
+		close {_p}'s inventory
+		openBank({_p})
+	else:
+		soundFailWithdraw({_p})
+		send message "{@p} &cNon hai abbastanza soldi." to {_p}
+		
+		
+function depositBank(p: player,tool: item, i: integer, c: boolean):
+	if {_tool} is {@cash}:
+		if {_tool}'s name is "&2{@s1}$":
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s1}*{_i} to {_p}'s balance
+		else if {_tool}'s name is "&2{@s2}$":
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s2}*{_i} to {_p}'s balance	
+		else if {_tool}'s name is "&2{@s3}$":		
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s3}*{_i} to {_p}'s balance
+		else if {_tool}'s name is "&2{@s4}$":
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s4}*{_i} to {_p}'s balance
+		else if {_tool}'s name is "&2{@s5}$":
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s5}*{_i} to {_p}'s balance
+		else if {_tool}'s name is "&2{@s6}$":
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s6}*{_i} to {_p}'s balance
+		else if {_tool}'s name is "&2{@s7}$":
+			remove 1 of {_tool} from {_p}'s inventory
+			add {@s7}*{_i} to {_p}'s balance
+		close {_p}'s inventory
+		if 1st line of {_tool}'s lore is "{@cashdescription}":
+			if {_c} is true:
+				openBank({_p})
+			else:
+				soundDepositWithdraw({_p})
+				send message "{@p} &aHai depositato." to {_p}
+#INVENTORIES
+
+on right click:
+	if clicked block is {@atm}:
+		if player's tool is {@cash}:
+			if {@require_access_to_deposit} is false:
+				if {derebank::cards::%player%::pin} is set:
+					set {_x} to player's tool
+					depositBank(player, {_x}, 1, false)
+				else:
+					send message "{@p} &cNon possiedi un conto bancario. Per favore aprine uno prima di depositare."
+			else:
+				send message "{@p} &aAccedi all'ATM per depositare.."
+		else if checkForCard(player) is true:
+			useCard(player)
+
+			
+			
+			
+			
+
+
+
+
+
+
+on inventory click:
+	set {_item} to event-item
+	if index of event-slot = 22:	
+		if 1st line of {_item}'s lore is "{@cashdescription}":
+			set {_amount} to item amount of event-item
+			soundDepositWithdraw(player)
+			depositBank(player, {_item}, {_amount}, true)
+			stop
+	if 1st line of {_item}'s lore is "{@cashdescription}":
+		stop
+	if name of event-inventory is "{@atm_name}":
+		if index of event-slot = 0:
+			cancel event
+		if index of event-slot = 1:
+			cancel event
+		if index of event-slot = 2:
+			cancel event
+		if index of event-slot = 3:
+			cancel event
+		if index of event-slot = 4:
+			cancel event
+			soundCloseBank(player)
+			close player's inventory
+		if index of event-slot = 5:
+			cancel event
+		if index of event-slot = 6:
+			cancel event
+		if index of event-slot = 7:
+			cancel event
+		if index of event-slot = 8:
+			cancel event
+		if index of event-slot = 9:
+			cancel event
+		if index of event-slot = 10:
+			cancel event
+			withdrawBank(player, {@s1})
+		if index of event-slot = 11:
+			cancel event
+			withdrawBank(player, {@s2})
+		if index of event-slot = 12:
+			cancel event
+			withdrawBank(player, {@s3})
+		if index of event-slot = 13:
+			cancel event
+			withdrawBank(player, {@s4})
+		if index of event-slot = 14:
+			cancel event
+			withdrawBank(player, {@s5})
+		if index of event-slot = 15:
+			cancel event
+			withdrawBank(player, {@s6})
+		if index of event-slot = 16:
+			cancel event
+			withdrawBank(player, {@s7})
+		if index of event-slot = 17:
+			cancel event
+		if index of event-slot = 18:
+			cancel event
+		if index of event-slot = 19:
+			cancel event
+		if index of event-slot = 20:
+			cancel event
+		if index of event-slot = 21:
+			cancel event
+		if index of event-slot = 4:
+			cancel event
+		if index of event-slot = 23:
+			cancel event
+		if index of event-slot = 24:
+			cancel event
+		if index of event-slot = 25:
+			cancel event
+		if index of event-slot = 26:
+			cancel event
+			
+function soundOpenBank(p: player):
+	play sound "minecraft:block.note_block.harp" at volume 1 at pitch 0.6 to {_p}
+	wait 5 tick
+	play sound "minecraft:block.note_block.harp" at volume 1 at pitch 1 to {_p}		
+
+
+function soundCloseBank(p: player):
+	play sound "minecraft:block.note_block.harp" at volume 1 at pitch 1 to {_p}
+	wait 5 tick
+	play sound "minecraft:block.note_block.harp" at volume 1 at pitch 0.6 to {_p}
+	
+	
+function soundDepositWithdraw(p: player):
+	play sound "minecraft:item.book.page_turn" at volume 1 at pitch 1.5 to {_p}
+	
+function soundFailWithdraw(p: player):
+	play sound "minecraft:block.note_block.bass" at volume 1 at pitch 1 to {_p}
+			

@@ -1,0 +1,151 @@
+#DereCom 1.2 skript by DereWah -> https://www.spigotmc.org/resources/derecom-phone-skript.102600/
+#Language: IT ----> https://t.me/skriptitaly 
+
+
+Options:
+	item: iron door #Item che rappresenta il telefono.
+	model: &biPhone &912 #Nome del modello del telefono.
+	p: &7[&cDere&dCom&7] #Il prefisso dei messaggi del plugin.
+	credits: true #Invia i crediti per lo sviluppo del plugin ai giocatori che entrano nel server.
+	close_on_drop: true #Quando un giocatore droppa il telefono o muore, dovrebbe uscire dalle chiamate? true = sì
+	
+
+command /givephone [<player>]:
+	permission: derewah.givephone
+	aliases: /daitelefono, /givetelefono
+	trigger:
+		set {_item} to {@item}
+		set name of {_item} to "{@model}"
+		if arg is set:
+			give {_item} to arg
+			send message "{@p} &aHai ricevuto un telefono." to arg
+		else:
+			give {_item} to player
+			send message "{@p} &aHai ricevuto un telefono." to player
+			
+			
+command /call <player>:
+	aliases: /chiama, /dcall, /derecall
+	permission: derewah.call
+	trigger:
+		set {_item} to {@item}
+		set name of {_item} to "{@model}"
+		if player's inventory contains {_item}: 
+			if arg is not player:
+				if arg's inventory contains {_item}:
+					if {derecom::players::%player%::receiver} is not set:
+						if {derecom::players::%player%::calling} is not set:
+							if {derecom::players::%arg%::calling} is not player:
+								set {derecom::players::%player%::calling} to arg
+								send message formatted "{@p} &6%player% &ati sta chiamando... &7[<command:/call %player%>&c&lPREMI&7]<reset>&a per accettare." to arg
+								send message formatted "{@p} &aStai chiamando &6%arg%&a..." to player
+								wait 10 seconds
+								if {derecom::players::%player%::calling} is arg:
+									send message formatted "{@p} &aSquillando..."
+								else:
+									stop
+								wait 10 seconds	
+								if {derecom::players::%player%::calling} is arg:
+									send message formatted "{@p} &aSquillando..."
+								else:
+									stop
+								wait 10 seconds
+								if {derecom::players::%player%::calling} is arg:
+									send message formatted "{@p} &c%arg% non ha risposto."
+									clear {derecom::players::%player%::calling}
+							else:
+								send message formatted "{@p} &6%player% &aha accettato la chiamata." to arg
+								send message formatted "{@p} &aHai accettato la chiamata di &6%arg%&a." to player
+								clear {derecom::players::%arg%::calling} 
+								clear {derecom::players::%player%::calling}
+								set {derecom::players::%arg%::receiver} to player
+								set {derecom::players::%player%::receiver} to arg
+						else:
+							send message formatted "{@p} &cStai già chiamando un giocatore."
+					else:
+						send message "{@p} &cSei già in un'altra chiamata. Usa /leavecall."
+				else:
+					send message "{@p} &c%arg% non possiede un telefono."
+			else:
+				send message "{@p} &cNon puoi chiamarti da solo."
+		else:
+			send message "{@p} &cNon possiedi un telefono."
+			
+command /leavecall:
+	permission: derewah.leavecall
+	aliases: /chiudichiamata
+	trigger:
+		leaveCall(player, false)
+		
+command /calldebug:
+	permission: *
+	trigger:
+		clear {derecom::*} #usa questo solo per il debug, elimina tutte le variabili e chiude tutte le chiamate attive.
+		
+
+
+on quit:
+	leaveCall(player, true)
+	
+on join:
+	leaveCall(player, true)
+	
+on death:
+	if {@close_on_drop} is true:
+		leaveCall(victim, true)
+	
+on drop:
+	if {@close_on_drop} is true:
+		if item is {@item}:
+			if item's name is "{@model}":
+				leaveCall(player, true)
+		
+on inventory click:
+	if {@close_on_drop} is true:
+		if event-item is {@item}:
+			if item's name is "{@model}":
+				leaveCall(player, true)
+				
+				
+on swap hand items:
+	if event-player's tool is {@item}:
+		if event-player's tool's name is "{@model}":
+			cancel event
+			
+on right click:
+	if event-item is {@item}:
+		if event-item's name is "{@model}":
+			send message "{@p} &aUsa &6&n/call <player>&a per chiamare un giocatore." to player
+			cancel event
+	if event-player's off hand tool is {@item}:
+		if event-player's off hand tool's name is "{@model}":
+			cancel event
+	
+	
+on chat:
+	if {derecom::players::%player%::receiver} is set:
+		cancel event
+		send message "{@p} &7[<tooltip:&c&lCHIUDI CHIAMATA><command:/leavecall>&c&lX&7<reset>] &8%player%: &7%unformatted message%" to player and {derecom::players::%player%::receiver}
+	
+
+
+
+function leaveCall(p: player, dropped: boolean):
+	clear {derecom::players::%{_p}%::calling}
+	if {derecom::players::%{_p}%::receiver} is set:
+		send message "{@p} &6%{_p}%&a ha chiuso la chiamata." to {derecom::players::%{_p}%::receiver} and {_p}
+		clear {derecom::players::%{derecom::players::%{_p}%::receiver}%::receiver}
+		clear {derecom::players::%{_p}%::receiver}
+	else:
+		if {_dropped} is false:
+			send message "{@p} &cNon sei in una chiamata." to {_p}
+
+
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://www.spigotmc.org/resources/derecom-phone-skript.102600/>DereWah &b[&9&nLINK&b]<reset>"
+		
+		
+		
+
