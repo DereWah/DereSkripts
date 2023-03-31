@@ -1,3 +1,15 @@
+#Skript: SkriptGPT.sk by DereWah-> https://t.me/skriptitaly
+#Version: 1.1
+
+#Requirements-------------------
+#Skript (2.6.4 and 2.7-beta have been tested) https://github.com/SkriptLang/Skript/releases
+#Skript-GPT 1.1 https://github.com/DereWah/Skript-GPT/releases
+
+#Commands----------------------
+#/skriptgpt <prompt> | skriptgpt.use | Send a request to SkriptGPT.
+#/skriptgpt clear | skriptgpt.use | Clear your past conversation.
+#/skriptgpt bias | skriptgpt.admin | Add a bias to all the conversations. To remove a bias set it to ""
+
 Options:
 	p: &7[&dSkript&7GPT&7] #Prefix
 	gpt_item: command block #Item representing the assistant in the GUI
@@ -84,11 +96,7 @@ command /skriptgpt [<text>] [<text>]:
 			if player has permission "skriptgpt.admin":
 				send message "{@p} &cAdmin commands: /skriptgpt bias"
 			send message "{@p} &oSkript by &7<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
-	
-command /vars:
-	trigger:
-		send {skriptgpt::conversations::%player%::*} to player
-				
+
 on inventory click:
 	if name of event-inventory is "{@p}":
 		cancel event
