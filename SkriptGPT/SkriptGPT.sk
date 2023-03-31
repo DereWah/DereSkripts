@@ -1,0 +1,109 @@
+Options:
+	p: &7[&dSkript&7GPT&7] #Prefix
+	gpt_item: command block #Item representing the assistant in the GUI
+	word_per_line: 6 #default words per line in GUI.
+	max_tokens: 150 #max length of response, in tokens. 1 token is 3-4 characters. 150 is ok.
+	credits: true #Dev credits.
+	
+	
+function formatMessage(t: text, wpl: integer) :: text:
+	set {_ws::*} to {_t} split at " "
+	set {_result} to "&d"
+	loop {_ws::*}:
+		if (loop-index parsed as integer / {_wpl}) is not floor(loop-index parsed as integer / {_wpl}):
+			set {_result} to "%{_result}%%loop-value% "
+		else:
+			if mod(loop-index parsed as integer/{_wpl}, 2) is 0:
+				set {_color} to "&d"
+			else:
+				set {_color} to "&5"
+			set {_result} to coloured "%{_result}%%nl%%{_color}%%loop-value% "
+	return {_result}
+		
+function openConv(p: player, c: text, wpl: integer = {@word_per_line}):
+	if {_wpl} < {@word_per_line}:
+		set {_wpl} to {@word_per_line}
+	set {_gui} to a new chest inventory with 6 row with name "{@p}"
+	set slot 49 of {_gui} to barrier named "&c&lCLEAR CONVERSATION" with lore "&7&oEmpty your previous conversation with SkriptGPT."
+	loop indexes of {skriptgpt::conversations::%{_c}%::*}:
+		if {skriptgpt::conversations::%{_c}%::%loop-value%}'s gpt role is not "system":
+			set {_formatted} to formatMessage({skriptgpt::conversations::%{_c}%::%loop-value%}'s gpt content, {_wpl})
+			if {skriptgpt::conversations::%{_c}%::%loop-value%}'s gpt role is "user":
+				set {_item} to skull of {_c} parsed as offlineplayer named "&7[&d%loop-value%&7] &d%{_c}%" with lore "%{_formatted}%"
+			else if {skriptgpt::conversations::%{_c}%::%loop-value%}'s gpt role is "assistant":
+				set {_item} to {@gpt_item} named "&7[&d%loop-value%&7] {@p}" with lore "%{_formatted}%"
+			set slot (loop-value parsed as integer - 2) of {_gui} to {_item}
+	set slot 51 of {_gui} to (skull of "MHF_arrowdown" parsed as offlineplayer) named "&a&lSHRINK TEXT" with lore "&0%{_wpl}-1%%nl%%nl%&7Click to shrink the GUI text."
+	set slot 47 of {_gui} to (skull of "MHF_arrowup" parsed as offlineplayer) named "&c&lSPREAD TEXT" with lore "&0%{_wpl}+1%%nl%%nl%&7Click to spread the GUI text."
+	open {_gui} to {_p}
+	
+
+
+command /skriptgpt [<text>] [<text>]:
+	aliases: /chatgpt, /gpt
+	permission: skriptgpt.use
+	trigger:
+		if arg-1 is "conversation" or "gui":
+			openConv(player, "%player%")
+		else if arg-1 is "clear" or "reset":
+			send message "{@p} &cYour conversation has been cleared."
+			clear {skriptgpt::conversations::%player%::*}
+			add {skriptgpt::bias} to {skriptgpt::conversations::%player%::*}
+		else if arg-1 is "bias":
+			if player has permission "skriptgpt.admin":
+				if arg-2 is set:
+					set {_bias} to a new conversation message with role system
+					set {_bias}'s gpt content to unformatted arg-2
+					set {skriptgpt::bias} to {_bias}
+					loop indexes of {skriptgpt::conversations::*}:
+						if gpt role of {skriptgpt::conversations::%loop-value%::1} is not "system":
+							set {skriptgpt::conversations::%loop-value%::0} to {skriptgpt::bias}
+							set {skriptgpt::conversations::%loop-value%::*} to {skriptgpt::conversations::%loop-value%::*} #this is to move all the values to the default skript indexes, beginning from 1.
+						else:
+							set {skriptgpt::conversations::%loop-value%::1} to {skriptgpt::bias}						
+					send message "{@p} &aYou have set the conversation bias to &o%{skriptgpt::bias}%"
+				else:
+					send message "{@p} &cSpecify the bias for the conversations."
+					send message "{@p} &cThe &c&obias&c is a prompt that will be put in front of all the players' conversations. It is useful for giving a theme to the assistant and customize it to fit your server."
+			else:
+				send message "{@p} &cYou don't have the permission &4SkriptGPT.admin&c."
+		else if arg-1 is set:
+			set {_text} to "%arg-1% "
+			if arg-2 is set:
+				set {_text} to "%{_text}%%arg-2%"
+			set {_conv} to a new conversation message
+			set {_conv}'s gpt content to unformatted uncoloured "%{_text}%"
+			send message "{@p} &7%player%&8:&r %{_conv}'s gpt content%"
+			add {_conv} to {skriptgpt::conversations::%player%::*}
+			generate a chat completion with conversation {skriptgpt::conversations::%player%::*} and max tokens {@max_tokens}
+			set {_response} to last generated prompt
+			add {_response} to {skriptgpt::conversations::%player%::*}
+			send message formatted "<tooltip:&7Click to view in a GUI!><cmd:/skriptgpt gui>&7[&5&lGUI&7]<reset> &dSkript&7GPT&8:&r %{_response}'s gpt content%"				
+		else:
+			send message "{@p} &cCorrect usage: /skriptgpt <write your prompt prompt &4| &cclear &4| &cgui>"
+			if player has permission "skriptgpt.admin":
+				send message "{@p} &cAdmin commands: /skriptgpt bias"
+			send message "{@p} &oSkript by &7<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
+	
+command /vars:
+	trigger:
+		send {skriptgpt::conversations::%player%::*} to player
+				
+on inventory click:
+	if name of event-inventory is "{@p}":
+		cancel event
+		if index of event-slot is 49:
+			close player's inventory
+			make player execute "/skriptgpt clear"
+			make player execute "/skriptgpt gui"
+		else if index of event-slot is 47:
+			set {_wpl} to uncoloured 1st line of event-slot's lore parsed as integer
+			openConv(player, "%player%", {_wpl})
+		else if index of event-slot is 51:
+			set {_wpl} to uncoloured 1st line of event-slot's lore parsed as integer
+			openConv(player, "%player%", {_wpl})
+			
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
