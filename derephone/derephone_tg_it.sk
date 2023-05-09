@@ -1,4 +1,4 @@
-#DerePhone 1.1 by DereWah --> https://t.me/skriptitaly
+#DerePhone TG 1.2 by DereWah --> https://t.me/skriptitaly
 #LINGUA: IT
 
 #ATTENZIONE!--------------------------------
@@ -57,8 +57,6 @@
 #/telefono addgps <nome_località> <ID del blocco in GUI>| phone.admin | aggiungi una località nel GPS.
 #!!!Non puoi usare spazi nel nome della località. USA invece gli spazi nell'item della GUI.!!!
 
-
-
 Options:
 	p: &7[&e&lDEREPHONE&7] #Prefix dello skript
 	
@@ -114,16 +112,6 @@ Options:
 	
 
 
-
-
-
-	
-	
-
-
-
-
-
 #main startfold
 
 
@@ -140,6 +128,9 @@ command /phone [<text>] [<text>] [<text>]:
 	aliases: /telefono, /derephone
 	permission: phone.use
 	trigger:
+		if "TeleLink.sk" is not loaded:
+			if player has permission "phone.admin":
+				send message "{@p} &cFATAL ERROR RELOADING DEREPHONE: &4&lTeleLink skript has not been found.%nl%&7If you wish to use this version of derephone, please download and install the skript TeleLink &7&a&l<url:https://www.spigotmc.org/resources/telelink-link-minecraft-accounts-to-telegram-with-skript.109675/>HERE&7<reset>.%nl%&7Remember to also install the addon Skelegram!"
 		if arg-1 is "give" or "get" or "dai" or "fai":
 			if player has permission "phone.give":
 				set {_target} to arg-2 parsed as player
