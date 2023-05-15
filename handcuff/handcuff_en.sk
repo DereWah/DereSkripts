@@ -9,6 +9,10 @@
 #Currently, the script is not compatible with mask plugins (that hide your identity).
 #In the future, I plan to create one, so when that script is released, this script will be updated to be compatible.
 
+#REQUIREMENTS:
+#SkRayFall 1.9.25 (for mc 1.12 - 1.16.5)
+#SkRayFall latest version (for mc 1.19)
+
 
 Options:
 	p: &7[&bPOLICE&7] #Script prefix.
