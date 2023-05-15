@@ -1,0 +1,236 @@
+#DereTaser 1.2 skript by DereWah -> https://t.me/skriptitaly
+#Language: IT <---- https://t.me/skriptitaly
+
+#COMMANDS:
+#/taser | deretaser.taser | Ricevi un taser
+#/taser charge | deretaser.charge | Ricevi delle ricariche per il taser.
+#/taser debug | deretaser.debug | Resetta lo skript e le variabili.
+
+#REQUISITI:
+#SkRayFall 1.9.25 (per mc 1.12 - 1.16.5)
+#SkRayFall ultima versione (per mc 1.19)
+
+Options:
+	p: &7[&9Dere&bTaser&7] #Prefisso dei messaggi.
+	taser: iron horse armor #Item che rappresenta il taser.
+	taser_name: &bTASER#Nome del taser. NON inserire nel nome i seguenti caratteri: < > sennò si va a buggare tutto.
+	taser_lore: &7Tasto destro per taserare. #Descrizione del taser
+	warn: &bYou are tased! #Messaggio da mostrare ai giocatori quando vengono taserati
+	duration: 6 seconds #Durata scarica elettrica
+	cooldown: 5 seconds #taser cooldown
+	action_bar: true #Lo skript dovrebbe mandare i messaggi nell'action bar (true) o in chat? (false) <-- molto spammoso in chat
+	success_chance: 5 #Probabilità di successo del tase. Più è basso questo numero, più è probabile che il tase fallisca.
+	max_charges: 4 #massimo di cariche in 1 taser.
+	charge_item: feather #item che rappresenta le munizioni per taser
+	charge_name: &bRICARICA TASER #Nome delle munizioni per taser
+	charge_description: &7Tasto sinistro sul taser per ricaricare. #descrizione delle munizioni per taser
+	open_brack: &8<<&b&l #parentesi aperte e chiuse del numero di cariche rimanenti. Sconsiglio di cambiarle
+	close_brack: &8>>
+	credits: true
+	drop_items_on_tase: false
+
+command /taser [<text>]:
+	permission: deretaser.taser
+	trigger:
+		if arg is not set:
+			set {_item} to {@taser}
+			set {_item}'s name to "{@taser_name} {@open_brack}0{@close_brack}"
+			set 1st line of {_item}'s lore to "{@taser_lore}"
+			set {_charge} to {@charge_item}
+			set {_charge}'s name to "{@charge_name}"
+			set 1st line of {_charge}'s lore to "{@charge_description}"
+			send message "{@p} &bYou received a taser"
+			give {_item} to player
+			give 4 of {_charge} to player
+		else if arg is "charge" or "carica" or "ricarica":
+			if player has permission "deretaser.charge":
+				set {_charge} to {@charge_item}
+				set {_charge}'s name to "{@charge_name}"
+				set 1st line of {_charge}'s lore to "{@charge_description}"			
+				give 4 of {_charge} to player
+			else:
+				send message "{@p} &cYou don't have the permission &4deretaser.charge&c."
+		else if arg is "debug":
+			if player has permission "deretaser.debug":
+				clear {taser::*}
+				send message "{@p} &aVariables reset."
+			else:
+				send message "{@p} &cYou don't have the permission &4deretaser.debug&c."
+		else:
+			send message "{@p} &cCorrect usage: /taser &4|&c /taser charge&4 | &c/taser debug"
+		
+
+
+
+
+function taseSound(p: player):
+	play sound "minecraft:entity.firework_rocket.twinkle" at volume 1 at pitch 2 to {_p}
+		
+		
+function taseSoundReload(p: player):
+	play sound "minecraft:block.tripwire.click_on" at volume 1 at pitch 1.3 to {_p}
+	wait 1 tick
+	play sound "minecraft:block.tripwire.click_on" at volume 1 at pitch 1.5 to {_p}	
+	wait 1 tick	
+	play sound "minecraft:block.tripwire.click_off" at volume 1 at pitch 2 to {_p}
+	
+function taseEmptySound(p: player):
+	play sound "minecraft:block.tripwire.click_on" at volume 1 at pitch 1.5 to {_p}	
+	wait 2 tick
+	play sound "minecraft:block.tripwire.click_on" at volume 1 at pitch 1.3 to {_p}
+
+
+
+
+
+
+
+on rightclick on player:
+	if player's tool is {@taser}:
+		if 1st line of event-player's tool's lore is "{@taser_lore}":
+			if {taser::%player%::lastused} is not set:
+				set {taser::%player%::lastused} to now
+				remove {@cooldown} from {taser::%player%::lastused}
+				remove 2 minutes from {taser::%player%::lastused}
+			tasePlayer(player,entity)
+			
+
+			
+function tasePlayer(a: player, v: player):
+	set {_c} to getCharge({_a})
+	if {_c} > 0:
+		if difference between now and {taser::%{_a}%::lastused} >= {@cooldown}:
+			if {taser::%{_v}%::tased} is not set:
+				if {_v} is not blocking:
+					set {taser::%{_a}%::lastused} to now
+					reloadTaser({_a})
+					set {_a}'s tool's name to "{@taser_name} {@open_brack}%{_c} - 1%{@close_brack}"		
+					set {_chance} to a random integer between 1 and {@success_chance}
+					taseSound({_a})
+					taseSound({_v})
+					if {_chance} > 1:
+						send message "{@p} &bYou tased &9%{_v}%&b." to {_a}
+						make {_v} dismount from vehicle
+						set {taser::%{_v}%::tased} to true
+						taserDrop({_v})
+						push {_v} backwards with force 0.5
+						damage {_v} by 2 hearts
+						apply potion of slowness of tier 20 without particles to {_v} for {@duration}
+						apply potion of blindness of tier 1 without particles to {_v} for {@duration}
+						send title "&cTASERATO" with subtitle "&eSei stato taserato!" to {_v} for 4 seconds
+						wait {@duration}
+						clear {taser::%{_v}%::tased}
+						remove slowness from {_v}'s active potion effects
+						remove blindness from {_v}'s active potion effects
+						remove jump boost from {_v}'s active potion effects
+					else:
+						send message "{@p} &bYou failed to tase &9%{_v}%&b." to {_a}
+				else:
+					send message "{@p} &9%{_v}% &bshielded the tase." to {_a}
+			else:
+				if {@action_bar} is false:
+					send message "{@p} &cThis player is already tased." to {_a}
+				else:
+					send action bar "{@p} &cThis player is already tased." to {_a}
+		else:
+			if {@action_bar} is false:
+				send message "{@p} &bReloading! &9%difference between {@cooldown} and difference between now and {taser::%{_a}%::lastused}%" to {_a}
+	else:
+		taseEmptySound({_a})
+		if {@action_bar} is false:
+			send message "{@p} &cThe taser is out of ammo." to {_a}
+		else:
+			send action bar "{@p} &cThe taser is out of ammo." to {_a}		
+
+		
+		
+function reloadTaser(a: player):
+	if {@action_bar} is true:
+		while difference between now and {taser::%{_a}%::lastused} < {@cooldown}:
+			send action bar "{@p} &bReload: &9%difference between {@cooldown} and difference between now and {taser::%{_a}%::lastused}%" to {_a}
+			wait 0.5 seconds
+			send action bar "{@p} &bReady." to {_a}		
+		
+	
+function taserDrop(v: player):
+	if {@drop_items_on_tase} is true:
+		drop {_v}'s tool 2 meters above and 3 meters horizontally in front of {_v}
+		drop {_v}'s off hand tool 2 meters above and 3 meters horizontally in front of {_v}
+		remove {_v}'s tool from {_v}'s inventory
+		remove {_v}'s off hand tool from {_v}'s inventory			
+	
+	
+function chargeTaser(p: player):
+	set {_c} to getCharge({_p})
+	set {_charge} to {@charge_item}
+	set {_charge}'s name to "{@charge_name}"
+	set 1st line of {_charge}'s lore to "{@charge_description}"
+	if {_c} < {@max_charges}:
+		taseSoundReload({_p})
+		if {_p}'s inventory contains {_charge}:
+			remove 1 of {_charge} from {_p}'s inventory
+			set {_p}'s tool's name to "{@taser_name} {@open_brack}%{_c} + 1%{@close_brack}"
+		else:
+			send message "{@p} &cYou're out of charges." to {_p}
+	else:
+		send message "{@p} &cThe taser is already reloaded." to {_p}
+		
+function isTased(p: player) :: boolean:
+	return {taser::%{_p}%::tased}
+		
+		
+function getCharge(p: player) :: integer:
+	set {_name} to uncoloured name of {_p}'s tool # TASER {@open_brack}x{@close_brack}
+	set {_n::*} to {_name} split by uncoloured "{@open_brack}"
+	replace all uncoloured "{@close_brack}" in {_n::2} with ""
+	set {_int} to {_n::2} parsed as integer
+	return {_int}
+
+on jump:
+	if isTased(event-player) is true:
+		cancel event
+
+on mount:
+	if isTased(event-player) is true:
+		cancel event
+		
+		
+on rightclick:
+	if isTased(event-player) is true:
+		cancel event
+		taserDrop(event-player)
+
+		
+on leftclick:
+	if isTased(event-player) is true:
+		cancel event
+		taserDrop(event-player)
+
+on leftclick:
+	if isTased(event-player) is not set:
+		if event-player's tool is {@taser}:
+			if 1st line of event-player's tool's lore is "{@taser_lore}":
+				cancel event
+				chargeTaser(player)
+			
+			
+on chat:
+	if isTased(event-player) is true:
+		cancel event
+		send message "{@p} &cYou can't chat while tased."
+		
+on command:
+	if isTased(event-player) is true:
+		cancel event
+		send message "{@p} &cYou can't execute commands while tased."	
+
+
+on before crackshot shoot:
+	if isTased(event-player) is true:
+		cancel event
+		send message "{@p} &cYou can't shoot while tased."
+		
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://t.me/skriptitaly>DereWah &b[&9&nLINK&b]<reset>"
