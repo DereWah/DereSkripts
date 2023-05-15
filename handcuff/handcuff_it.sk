@@ -1,0 +1,154 @@
+#Handcuffs 1.1 skript by DereWah -> https://www.spigotmc.org/members/derewah.240784/
+#Language: IT
+#Se trovi dei bug reportameli per favore: TG: https://t.me/skriptitaly
+
+#COMMANDS:
+#/handcuff | handcuff.receive | Ottieni delle manette.
+#/handcuff <player> | handcuff.receive | Ottieni delle chiavi per smanettare uno specifico giocatore.
+#/handcuffdebug | handcuff.debug | Resetta lo skript e le variabili.
+#Al momento lo skript non è compatibile con plugin delle maschere (che nascondono la tua identità).
+#In futuro ho in mente di farne uno, quindi quando uscirà questo skript verrà aggiornato per essere compatibile.
+
+
+Options:
+	p: &7[&bPOLIZIA&7] #Prefisso dello skript.
+	handcuff_item: gold horse armor #Oggetto che rappresenta le manette.
+	handcuff_name: &b&lMANETTE #Nome dell'item delle manette.
+	handcuff_lore: &7Clicca su un giocatore per ammanettarlo. #Lore dell'item delle manette.
+	handcuff_title: &bAMMANETTATO! #Titolo visualizzato da un giocatore quando è ammanettato.
+	handcuff_subtitle: &7Sei stato ammanettato. #Sottotitolo visualizzato da un giocatore quando è ammanettato.
+	key_item: tripwire hook #Oggetto che rappresenta le chiavi delle manette.
+	key_name: &eChiavi per manette #Nome dell'item delle chiavi delle manette.
+	credits: true #Abilita i crediti per lo sviluppatore.
+
+command /handcuff [<offlineplayer>]:
+	aliases: /manette, /handcuffs
+	permission: handcuff.receive
+	trigger:
+		if arg is not set:
+			give handcuffInstance() to player
+			send message "{@p} &7Hai ricevuto {@handcuff_name}"
+		else:
+			give handcuffKeyInstance(arg) to player
+			send message "{@p} &7Hai ricevuto le {@key_name}&7 di %arg%."
+	
+command /handcuffdebug:
+	permission: handcuff.debug
+	trigger:
+		clear {hc::*}
+		send message "{@p} &aSkript e variabili svuotate."
+
+	
+on rightclick on player:
+	if player's tool is handcuffInstance():
+		if {hc::blocked::*} does not contain event-entity:
+			handcuffPlayer(event-entity, player)
+		else:
+			send message "{@p} &cQuesto giocatore è già ammanettato."
+	else if player's tool is handcuffKeyInstance(event-entity):
+		if {hc::blocked::*} contains event-entity:
+			handcuffRemove(event-entity, player)
+				
+				
+on right click:
+	if isHandcuffed(player) is true:
+		cancel event
+		
+		
+		
+on quit:
+	if isHandcuffed(player) is true:
+		kill player
+		remove player from {hc::blocked::*} #kill on join
+		
+on join:
+	if {hc::blocked::*} contains player:
+		kill player
+		remove player from {hc::blocked::*} #we check this aswell in case the server crashed.
+		
+		
+		
+on damage of player:
+	if {hc::blocked::*} contains victim:
+		increase the damage by 50
+
+on death of player:
+	if {hc::blocked::*} contains victim:
+		set {_l} to victim's location
+		drop 1 of handcuffInstance() 1 meter above {_l}
+		remove victim from {hc::blocked::*}
+		if attacker's inventory contains handcuffKeyInstance(victim):
+			remove handcuffKeyInstance(victim) from attacker's inventory
+			
+			
+function handcuffRemove(v: player, a: player):
+	remove slowness from {_v}'s active potion effects
+	remove handcuffKeyInstance({_v}) from {_a}'s inventory
+	give handcuffInstance() to {_a}
+	soundRemoveHandcuff({_v})
+	remove {_v} from {hc::blocked::*}
+	if {_a} is set:
+		send message "{@p} &b%{_a}%&7 sta smanettando &b%{_v}%" to {_v} and {_a}	
+	
+function isHandcuffed(p: offlineplayer) :: boolean:
+	if {hc::blocked::*} contains {_p}:
+		return true
+	else:
+		return false
+	
+function handcuffInstance() :: item:
+	set {_hc} to {@handcuff_item}
+	set {_hc}'s name to "{@handcuff_name}"
+	set 1st line of {_hc}'s lore to "{@handcuff_lore}"	
+	return {_hc}
+	
+	
+function handcuffKeyInstance(v: offlineplayer) :: item:
+	set {_key} to {@key_item}
+	set {_key}'s name to "{@key_name}"
+	set 1st line of {_key}'s lore to "&7%{_v}%"
+	return {_key}
+	
+			
+function handcuffPlayer(v: player, a: player):
+	send message "{@p} &b%{_a}%&7 sta ammanettando &b%{_v}%" to {_v} and {_a}
+	send title "{@handcuff_title}" with subtitle "{@handcuff_subtitle}" to {_v} for 5 seconds
+	apply potion of slowness of tier 20 without particles to {_v} for 1 year
+	make {_v} dismount from vehicle
+	remove 1 of handcuffInstance() from {_a}'s inventory
+	soundHandcuff({_v})
+	give handcuffKeyInstance({_v}) to {_a}
+	add {_v} to {hc::blocked::*}
+	
+	
+	
+function soundHandcuff(p: player):
+	set {_l} to location of {_p}
+	play sound "minecraft:block.note_block.hat" at volume 1 at pitch 1 at {_l}
+	wait 5 tick
+	play sound "minecraft:block.note_block.hat" at volume 1 at pitch 1.2 at {_l}
+	
+	
+function soundRemoveHandcuff(p: player):
+	set {_l} to location of {_p}
+	play sound "minecraft:block.note_block.hat" at volume 1 at pitch 1.2 at {_l}
+	wait 5 tick
+	play sound "minecraft:block.note_block.hat" at volume 1 at pitch 1 at {_l}	
+	
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message "{@p}&b Plugin by &9<link:https://www.spigotmc.org/members/derewah.240784/>DereWah &b[&9&nLINK&b]<reset>"	
+		
+		
+on mount:
+	if isHandcuffed(player) is true:
+		cancel event
+		
+on jump:
+	if isHandcuffed(player) is true:
+		cancel event	
+		
+on before crackshot shoot:
+	if isHandcuffed(player) is true:
+		cancel event	
