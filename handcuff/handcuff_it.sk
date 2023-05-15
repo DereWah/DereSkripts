@@ -1,4 +1,4 @@
-#Handcuffs 1.1 skript by DereWah -> https://www.spigotmc.org/members/derewah.240784/
+#Handcuffs 1.2 skript by DereWah -> https://www.spigotmc.org/members/derewah.240784/
 #Language: IT
 #Se trovi dei bug reportameli per favore: TG: https://t.me/skriptitaly
 
@@ -8,6 +8,11 @@
 #/handcuffdebug | handcuff.debug | Resetta lo skript e le variabili.
 #Al momento lo skript non è compatibile con plugin delle maschere (che nascondono la tua identità).
 #In futuro ho in mente di farne uno, quindi quando uscirà questo skript verrà aggiornato per essere compatibile.
+
+
+#REQUIREMENTS:
+#SkRayFall 1.9.25 (for mc 1.12 - 1.16.5)
+#SkRayFall latest version (for mc 1.19)
 
 
 Options:
