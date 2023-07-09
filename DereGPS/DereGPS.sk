@@ -1,0 +1,114 @@
+Options:
+	p: &7[&aDere&2GPS&7]
+	gps_forward:  #E170
+	gps_forwardleft:  #E171
+	gps_left:  #E172
+	gps_backwardsleft:   #E173
+	gps_backwards:  #E174
+	gps_backwardsright:  #E175
+	gps_right:  #E176
+	gps_forwardright:  #E177
+	gps_icon:  #E178
+	gps_stop_radius: 3
+	
+	
+
+command /gps [<text>] [<text>]:
+	trigger:
+		if arg-1 is "stop":
+			if isDereGPSTracking(player) is true:
+				clear {deregps::players::%player%::*}
+				send message "{@p} &aGPS disabled."
+			else:
+				send message "{@p} &cYou are not using the GPS."
+		else if arg-1 is "create" or "delete":
+			if player has permission "deregps.admin":
+				if arg-1 is "create":
+					if arg-2 is set:
+						if indexes of {deregps::locations::*} does not contain lowercase arg-2:
+							set {deregps::locations::%lowercase arg-2%} to player's location
+							send message "{@p} &aThe location %lowercase arg-2% has been created!"
+						else:
+							send message "{@p} &cThis location already exists."
+					else:
+						send message "{@p} &cSpecify the name of the location to create."
+				else if arg-1 is "delete":
+					if arg-2 is set:
+						if indexes of {deregps::locations::*} contains lowercase arg-2:
+							clear {deregps::locations::%lowercase arg-2%}
+							send message "{@p} &aYou deleted the location %lowercase arg-2%"
+						else:
+							send message "{@p} &cThis location does not exist."
+					else:
+						send message "{@p} &cSpecify the name of the location to delete."
+			else:
+				send message "{@p} &cYou don't have the permission &4deregps.admin&c."
+		else if arg-1 is "list":
+			if player does not have permission "deregps.admin":
+				loop indexes of {deregps::locations::*}:
+					send message formatted "<cmd:/gps %loop-value%>&7[&r&7] &a- &2%loop-value%"
+			else:
+				loop indexes of {deregps::locations::*}:
+					send message formatted "<cmd:/gps delete %loop-value%>&7[&c&lX&7]<reset> <cmd:/gps %loop-value%>&7[{@gps_icon}&7]<reset> &a- &2%loop-value%"				
+		else:
+			if isDereGPSTracking(player) is false:
+				if arg-1 is set:
+					if indexes of {deregps::locations::*} contains lowercase arg-1:
+						set {deregps::players::%player%::target} to  {deregps::locations::%lowercase arg-1%}
+						startDereGPS(player)
+					else:
+						send message "{@p} &cThis location does not exist."
+				else:
+					make player execute "/gps list"
+			else:
+				send message "{@p} &cYour GPS is already running."
+				
+				
+on load:
+	clear {deregps::icons::*}
+	set {deregps::icons::1} to "{@gps_forwardright}" #177 /^
+	set {deregps::icons::2} to "{@gps_forward}" #170 |^
+	set {deregps::icons::3} to "{@gps_forwardleft}" #171 ^\
+	set {deregps::icons::4} to "{@gps_left}" #172 <-
+	set {deregps::icons::5} to "{@gps_backwardsleft}" #173 -/
+	set {deregps::icons::6} to "{@gps_backwards}" #174
+	set {deregps::icons::7} to "{@gps_backwardsright}" #175
+	set {deregps::icons::8} to "{@gps_right}" #176 ->
+
+		
+function isDereGPSTracking(p: player) :: boolean:
+	if {deregps::players::%{_p}%::target} is set:
+		return true
+	return false
+	
+	
+	
+	
+	
+function startDereGPS(p: player):
+	set {_b} to bossbar named "deregps.%{_p}%" with title "" with style solid
+	add {_p} to bossbar players of {_b}
+	send message "{@p} &aGPS enabled. Use &c/gps stop&a to disable it." to {_p}
+	while {deregps::players::%{_p}%::target} is set:
+		set {_d} to ceil(distance between {_p}'s location and {deregps::players::%{_p}%::target})
+		
+		
+		set {_dir} to vector from yaw {_p}'s yaw and pitch 0
+		set {_diff} to normalized vector between {_p}'s location and {deregps::players::%{_p}%::target}
+		
+		set {_cross} to ({_diff} cross {_dir}) dot vector(0,1,0)
+		set {_dot} to {_diff} dot {_dir}
+		
+		set {_angle} to atan2({_cross}, {_dot})
+		
+		set {_index} to floor(({_angle}+22 )/ 45)
+		if {_index} is -4:
+			set {_index} to 4
+		else if {_index} <= 0:
+			add 8 to {_index}	
+		set bossbar title of {_b} to "%{deregps::icons::%{_index}%}% &7[&e%{_d}% meters&7]"
+		if {_d} <= {@gps_stop_radius}:
+			clear {deregps::players::%{_p}%::target}
+			send message "{@p} &aYou arrived at your destination." to {_p}
+		wait 2 ticks
+	delete bossbar named "deregps.%{_p}%"
