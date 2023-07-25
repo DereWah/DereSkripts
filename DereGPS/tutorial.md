@@ -60,7 +60,8 @@ Poi apri il default.json, e crea/copia dal vecchio default.json di DereGPS una n
             "ascent": 9,
             "height": 9,
             "chars": ["\u<ID UNICODE SALVATO>"]
-        },```
+        },
+```
 
 Per capire cosa inserire in <DIREZIONE DELLA FRECCIA>, segui la tabella qui sotto:
 
