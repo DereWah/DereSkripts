@@ -10,11 +10,11 @@ In questo piccolo tutorial vi mostrerò come potete impostare la vostra resource
 
 ## Non hai una resource pack custom sul tuo server
 
-In questo caso è semplicissimo aggiungere il pacchetto di risorse: scaricalo a questo link e aggiungilo ai pacchetti del tuo server. Così facendo i players lo scaricheranno in automatico e vedranno l'icona del GPS completamente funzionante.
+In questo caso è semplicissimo aggiungere il pacchetto di risorse: scaricalo a questo link: https://github.com/DereWah/DereSkripts/raw/main/DereGPS/DereGPS.zip e aggiungilo ai pacchetti del tuo server. Così facendo i players lo scaricheranno in automatico e vedranno l'icona del GPS completamente funzionante.
 
 ## Hai una resource pack custom sul tuo server ma non usi i custom fonts (icone custom)
 
-Se il tuo server non usa icone custom, allora è semplice modificare il tuo resource pack "mixandolo" con quello di DereGPS. Scarica il pack da questo link, e sposta tutte le cartelle da `DereGPS\assets\minecraft` al tuo resource pack, nello stesso percorso. Assicurati di mettere tutti i files nel loro posto, così che il resource pack funzioni!
+Se il tuo server non usa icone custom, allora è semplice modificare il tuo resource pack "mixandolo" con quello di DereGPS. Scarica il pack da questo link: https://github.com/DereWah/DereSkripts/raw/main/DereGPS/DereGPS.zip, e sposta tutte le cartelle da `DereGPS\assets\minecraft` al tuo resource pack, nello stesso percorso. Assicurati di mettere tutti i files nel loro posto, così che il resource pack funzioni!
 
 Per assicurarti che tutto sia andato a buon fine, controlla che:
 
