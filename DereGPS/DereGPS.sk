@@ -1,3 +1,21 @@
+#DereGPS Skript 1.0 by DereWah -> https://t.me/SkriptItaly
+#Language: EN
+
+#Fiverr: https://www.fiverr.com/derewah/create-a-professional-minecraft-plugin-with-skript-for-your-server
+
+#-----------------REQUIREMENTS-----------------
+#Skript 2.6 (https://github.com/SkriptLang/Skript/releases)
+#SkBee (https://github.com/ShaneBeee/SkBee/releases)
+#----------------------------------------------
+
+#-----------------COMMANDS-----------------
+#/deregps stop | deregps.use | stops the GPS.
+#/deregps create | deregps.admin | create a location for the GPS.
+#/deregps delete | deregps.admin | remove a location for the GPS.
+#/deregps list | deregps.use | get a list of all the locations. If you have the permission deregps.admin, you will also see the button to remove the GPS location.
+#/deregps <location> | deregps.use | starts tracking a location
+#----------------------------------------------
+
 Options:
 	p: &7[&aDere&2GPS&7]
 	gps_forward:  #E170
@@ -10,10 +28,14 @@ Options:
 	gps_forwardright:  #E177
 	gps_icon:  #E178
 	gps_stop_radius: 3
+	credits: true #developer credits
 	
 	
 
-command /gps [<text>] [<text>]:
+command /deregps [<text>] [<text>]:
+	aliases: /gps, /dgps
+	permission: deregps.use
+	permission message: {@p} &cYou don't have the permission &4deregps.use&c.
 	trigger:
 		if arg-1 is "stop":
 			if isDereGPSTracking(player) is true:
@@ -49,7 +71,7 @@ command /gps [<text>] [<text>]:
 					send message formatted "<cmd:/gps %loop-value%>&7[&r&7] &a- &2%loop-value%"
 			else:
 				loop indexes of {deregps::locations::*}:
-					send message formatted "<cmd:/gps delete %loop-value%>&7[&c&lX&7]<reset> <cmd:/gps %loop-value%>&7[{@gps_icon}&7]<reset> &a- &2%loop-value%"				
+					send message formatted "<cmd:/gps delete %loop-value%>&7[&c&lX&7]<reset> <cmd:/gps %loop-value%>&7[&f{@gps_icon}&7]<reset> &a- &2%loop-value%"				
 		else:
 			if isDereGPSTracking(player) is false:
 				if arg-1 is set:
@@ -62,8 +84,12 @@ command /gps [<text>] [<text>]:
 					make player execute "/gps list"
 			else:
 				send message "{@p} &cYour GPS is already running."
-				
-				
+	
+on join:
+	wait 1 second
+	if {@credits} is true:
+		send message formatted "{@p}&b Plugin by &9<link:https://www.fiverr.com/derewah/create-a-professional-minecraft-plugin-with-skript-for-your-server>DereWah &b[&9&nLINK&b]<reset>"
+	
 on load:
 	clear {deregps::icons::*}
 	set {deregps::icons::1} to "{@gps_forwardright}" #177 /^
@@ -76,16 +102,15 @@ on load:
 	set {deregps::icons::8} to "{@gps_right}" #176 ->
 
 		
-function isDereGPSTracking(p: player) :: boolean:
+function isDereGPSTracking(p: offlineplayer) :: boolean:
 	if {deregps::players::%{_p}%::target} is set:
 		return true
 	return false
 	
-	
-	
-	
-	
-function startDereGPS(p: player):
+on quit:
+	clear {deregps::players::%player%::target}
+
+function startDereGPS(p: offlineplayer):
 	set {_b} to bossbar named "deregps.%{_p}%" with title "" with style solid
 	add {_p} to bossbar players of {_b}
 	send message "{@p} &aGPS enabled. Use &c/gps stop&a to disable it." to {_p}
