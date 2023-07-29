@@ -1,4 +1,4 @@
-#DereGPS Skript 1.0 by DereWah -> https://t.me/SkriptItaly
+#DereGPS Skript 1.1 by DereWah -> https://t.me/SkriptItaly
 #Language: EN
 
 #Fiverr: https://www.fiverr.com/derewah/create-a-professional-minecraft-plugin-with-skript-for-your-server
@@ -111,8 +111,8 @@ on quit:
 	clear {deregps::players::%player%::target}
 
 function startDereGPS(p: offlineplayer):
-	set {_b} to bossbar named "deregps.%{_p}%" with title "" with style solid
-	add {_p} to bossbar players of {_b}
+	set {_b} to bossbar named "deregps.%{_p}%" with title "" with style solid_bar
+	add {_p} to {_b}
 	send message "{@p} &aGPS enabled. Use &c/gps stop&a to disable it." to {_p}
 	while {deregps::players::%{_p}%::target} is set:
 		set {_d} to ceil(distance between {_p}'s location and {deregps::players::%{_p}%::target})
